@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: video_hipaa_db
+    environment:
+      POSTGRES_USER: hipaa_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change_this_password}
+      POSTGRES_DB: video_hipaa_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - hipaa_network
+    restart: unless-stopped
+    # Enable encryption at rest (configure in production)
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+      -c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+
+  backend:
+    build: ./backend
+    container_name: video_backend
+    environment:
+      DATABASE_URL: postgresql://hipaa_user:${DB_PASSWORD:-change_this_password}@postgres:5432/video_hipaa_db
+      SECRET_KEY: ${SECRET_KEY:-generate_random_secret_key}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-generate_random_jwt_key}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-generate_random_encryption_key}
+      FLASK_ENV: production
+    volumes:
+      - video_storage:/encrypted_storage
+      - ./backend:/app
+      - audit_logs:/app/logs
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    networks:
+      - hipaa_network
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: video_frontend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - hipaa_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DATA_PATH:-./data}/postgres
+      o: bind
+  video_storage:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DATA_PATH:-./data}/videos
+      o: bind
+  audit_logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${DATA_PATH:-./data}/logs
+      o: bind
+
+networks:
+  hipaa_network:
+    driver: bridge

@@ -1,0 +1,42 @@
+# Railway.app Deployment Configuration
+# Railway provides free hosting with $5/month credit (enough for student projects)
+
+# To deploy to Railway:
+# 1. Go to https://railway.app
+# 2. Sign up with GitHub
+# 3. Click "New Project" -> "Deploy from GitHub repo"
+# 4. Select this repository
+# 5. Railway will auto-detect and deploy using this configuration
+
+# Dockerfile will be used automatically
+# Environment variables will be set in Railway dashboard
+
+version: "1"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - PORT=5000
+      - DATABASE_URL=${{Postgres.DATABASE_URL}}
+      - SECRET_KEY=${{SECRET_KEY}}
+      - JWT_SECRET_KEY=${{JWT_SECRET_KEY}}
+      - ENCRYPTION_KEY=${{ENCRYPTION_KEY}}
+    healthcheck:
+      path: /api/health
+      interval: 30
+      timeout: 10
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=hipaa_user
+      - POSTGRES_PASSWORD=${{DB_PASSWORD}}
+      - POSTGRES_DB=video_hipaa_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
