@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download YOLOv8 model
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8m-pose.pt')"
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n-pose.pt')"
 
 # Copy application code
 COPY . .
