@@ -15,7 +15,7 @@ import os
 class KineticAnalyzer:
     """Main analyzer class for exercise form detection and analysis"""
     
-    def __init__(self, model_path='yolov8m-pose.pt'):
+    def __init__(self, model_path='yolov8n-pose.pt'):
         """Initialize the analyzer with YOLOv8 pose model"""
         self.model = YOLO(model_path)
         print(f"✓ YOLOv8-Pose model loaded: {model_path}")
