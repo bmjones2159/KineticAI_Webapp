@@ -24,19 +24,41 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql://user:password@localhost/video_hipaa_db')
+
+# Fix DATABASE_URL format (Railway/Render use postgres://, SQLAlchemy needs postgresql://)
+database_url = os.environ.get('DATABASE_URL', 'postgresql://user:password@localhost/video_hipaa_db')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
 app.config['UPLOAD_FOLDER'] = '/encrypted_storage/videos'
-app.config['ENCRYPTION_KEY'] = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key())
+
+# Fix ENCRYPTION_KEY (must be bytes, not string)
+encryption_key = os.environ.get('ENCRYPTION_KEY')
+if encryption_key is None:
+    encryption_key = Fernet.generate_key()
+elif isinstance(encryption_key, str):
+    # Convert string to bytes
+    encryption_key = encryption_key.encode('utf-8')
+app.config['ENCRYPTION_KEY'] = encryption_key
 
 # Initialize extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-cipher_suite = Fernet(app.config['ENCRYPTION_KEY'])
+
+# Create cipher suite with proper bytes key
+try:
+    cipher_suite = Fernet(app.config['ENCRYPTION_KEY'])
+except Exception as e:
+    app.logger.error(f"Error creating cipher suite: {e}")
+    app.logger.error(f"ENCRYPTION_KEY type: {type(app.config['ENCRYPTION_KEY'])}")
+    app.logger.error(f"ENCRYPTION_KEY length: {len(app.config['ENCRYPTION_KEY']) if app.config['ENCRYPTION_KEY'] else 0}")
+    raise
 
 # Configure HIPAA-compliant logging
 logging.basicConfig(level=logging.INFO)
@@ -566,6 +588,24 @@ def health_check():
 # Initialize database
 with app.app_context():
     db.create_all()
+    
+    # Auto-initialize for Railway deployment
+    if os.environ.get('AUTO_INIT_DB') == 'true':
+        try:
+            # Check if admin exists
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                admin = User(
+                    username='admin',
+                    email='admin@kineticai.com',
+                    password_hash=bcrypt.generate_password_hash('ChangeMe123!').decode('utf-8'),
+                    role='admin'
+                )
+                db.session.add(admin)
+                db.session.commit()
+                print("✓ Auto-initialized: Admin user created (username: admin, password: ChangeMe123!)")
+        except Exception as e:
+            print(f"Auto-init error (safe to ignore if already initialized): {e}")
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
