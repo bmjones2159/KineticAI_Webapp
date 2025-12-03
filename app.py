@@ -165,6 +165,24 @@ def compute_file_hash(file_path):
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
+# Homepage route
+@app.route('/')
+def index():
+    """Serve the frontend homepage"""
+    return jsonify({
+        'message': 'Kinetic AI Video Analysis API',
+        'version': '1.0.0',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'login': '/api/auth/login',
+            'register': '/api/auth/register',
+            'upload': '/api/videos/upload',
+            'analyze': '/api/videos/<id>/analyze'
+        },
+        'note': 'This is a REST API. Use a client application to interact with these endpoints.'
+    })
+
 # Authentication routes
 @app.route('/api/auth/register', methods=['POST'])
 def register():
