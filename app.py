@@ -169,19 +169,34 @@ def compute_file_hash(file_path):
 @app.route('/')
 def index():
     """Serve the frontend homepage"""
-    return jsonify({
-        'message': 'Kinetic AI Video Analysis API',
-        'version': '1.0.0',
-        'status': 'running',
-        'endpoints': {
-            'health': '/api/health',
-            'login': '/api/auth/login',
-            'register': '/api/auth/register',
-            'upload': '/api/videos/upload',
-            'analyze': '/api/videos/<id>/analyze'
-        },
-        'note': 'This is a REST API. Use a client application to interact with these endpoints.'
-    })
+    frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'index.html')
+    if os.path.exists(frontend_path):
+        return send_file(frontend_path)
+    else:
+        # Fallback to API info if frontend not found
+        return jsonify({
+            'message': 'Kinetic AI Video Analysis API',
+            'version': '1.0.0',
+            'status': 'running',
+            'endpoints': {
+                'health': '/api/health',
+                'login': '/api/auth/login',
+                'register': '/api/auth/register',
+                'upload': '/api/videos/upload',
+                'analyze': '/api/videos/<id>/analyze'
+            },
+            'note': 'This is a REST API. Use a client application to interact with these endpoints.'
+        })
+
+# Serve static frontend files
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static frontend files (CSS, JS, etc.)"""
+    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+    file_path = os.path.join(frontend_dir, path)
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        return send_file(file_path)
+    return jsonify({'error': 'File not found'}), 404
 
 # Authentication routes
 @app.route('/api/auth/register', methods=['POST'])
