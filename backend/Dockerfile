@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Copy frontend files from parent directory
-COPY ../frontend ./frontend
+COPY --chown=appuser:appuser ../frontend ./frontend
 
 # Create necessary directories
 RUN mkdir -p /encrypted_storage/videos /app/logs && \
