@@ -94,7 +94,7 @@ class Video(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     analysis_results = db.Column(db.Text)  # Encrypted JSON
-    metadata = db.Column(db.Text)  # Encrypted JSON
+    video_metadata = db.Column(db.Text)  # Encrypted JSON (renamed from 'metadata' - SQLAlchemy reserved word)
     access_count = db.Column(db.Integer, default=0)
     last_accessed = db.Column(db.DateTime)
     is_deleted = db.Column(db.Boolean, default=False)
@@ -275,7 +275,7 @@ def upload_video():
             mime_type=video_file.content_type,
             patient_id=encrypted_patient_id,
             user_id=current_user_id,
-            metadata=encrypted_metadata
+            video_metadata=encrypted_metadata
         )
         
         db.session.add(new_video)
