@@ -12,16 +12,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY ./requirements.txt .
+COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY backend/ .
 
-# Copy frontend files from parent directory
-COPY --chown=appuser:appuser ../frontend ./frontend
+# Copy frontend files
+COPY frontend/ ./frontend/
 
 # Create necessary directories
 RUN mkdir -p /encrypted_storage/videos /app/logs && \
