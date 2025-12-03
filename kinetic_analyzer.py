@@ -1,4 +1,4 @@
-"""
+    """
 Kinetic AI Video Analysis Module
 Integrated from Colab notebook - YOLOv8 Pose Estimation
 """
