@@ -15,8 +15,20 @@ import os
 class KineticAnalyzer:
     """Main analyzer class for exercise form detection and analysis"""
     
-    def __init__(self, model_path='yolov8n-pose.pt'):
+    def __init__(self, model_path='yolov8m-pose.pt'):
         """Initialize the analyzer with YOLOv8 pose model"""
+        # Handle PyTorch 2.6+ weights_only parameter
+        import torch
+        if hasattr(torch.serialization, 'add_safe_globals'):
+            # PyTorch 2.6+: Add safe globals for YOLOv8 models
+            try:
+                torch.serialization.add_safe_globals([
+                    'ultralytics.nn.tasks.PoseModel',
+                    'ultralytics.nn.tasks.DetectionModel'
+                ])
+            except:
+                pass  # Already added or not needed
+        
         self.model = YOLO(model_path)
         print(f"✓ YOLOv8-Pose model loaded: {model_path}")
         
