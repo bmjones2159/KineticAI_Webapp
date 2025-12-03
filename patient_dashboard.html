@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - KineticAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            font-size: 1.5em;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+
+        .stat-item {
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section-header h2 {
+            color: #333;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .upload-area {
+            border: 3px dashed #d0d0d0;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.active {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .exercise-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .exercise-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .exercise-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+        }
+
+        .exercise-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .exercise-details {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 3em;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .close-modal {
+            font-size: 2em;
+            color: #999;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .analysis-result {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>🏃 KineticAI - Patient Dashboard</h1>
+        <div class="navbar-right">
+            <div class="user-info">
+                <span id="userName">Loading...</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alert" class="alert"></div>
+
+        <!-- Stats Cards -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>📊 Progress Overview</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalSessions">0</div>
+                        <div class="stat-label">Total Sessions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="thisWeek">0</div>
+                        <div class="stat-label">This Week</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🎯 Current Goal</h3>
+                <div id="currentGoal">
+                    <p style="color: #666;">Complete 3 sessions per week</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="goalProgress" style="width: 66%"></div>
+                    </div>
+                    <p style="color: #999; margin-top: 10px; font-size: 0.9em;">2 of 3 completed</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>⭐ Latest Achievement</h3>
+                <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 3em;">🏆</div>
+                    <p style="color: #667eea; font-weight: 600; margin-top: 10px;">Week Warrior</p>
+                    <p style="color: #999; font-size: 0.9em;">3 sessions completed!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Video Section -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📹 Upload New Exercise Video</h2>
+            </div>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📤</div>
+                <h3>Click to upload or drag and drop</h3>
+                <p style="color: #999; margin-top: 10px;">MP4, MOV, AVI (Max 500MB)</p>
+                <input type="file" id="videoFile" accept="video/*" style="display: none;">
+            </div>
+
+            <div id="videoInfo" style="display: none;">
+                <p><strong>Selected file:</strong> <span id="fileName"></span></p>
+                <button class="btn btn-success" onclick="uploadAndAnalyze()" style="margin-top: 15px;">
+                    🚀 Upload & Analyze
+                </button>
+                <button class="btn btn-secondary" onclick="cancelUpload()" style="margin-top: 15px; margin-left: 10px;">
+                    Cancel
+                </button>
+            </div>
+
+            <div id="uploadLoading" class="loading">
+                <div class="spinner"></div>
+                <p>Analyzing your video with AI...</p>
+                <p style="color: #999; font-size: 0.9em;">This may take 30-60 seconds</p>
+            </div>
+
+            <div id="analysisResult" class="analysis-result" style="display: none;"></div>
+        </div>
+
+        <!-- Assigned Exercises -->
+        <div class="section">
+            <div class="section-header">
+                <h2>💪 Your Assigned Exercises</h2>
+                <button class="btn btn-secondary" onclick="showExerciseLibrary()">View Exercise Library</button>
+            </div>
+            
+            <div class="exercise-list" id="assignedExercises">
+                <!-- Exercises will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Progress Tracking -->
+        <div class="section">
+            <div class="section-header">
+                <h2>📈 Recent Activity</h2>
+            </div>
+            
+            <div id="recentActivity">
+                <!-- Recent videos will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Exercise Detail Modal -->
+    <div id="exerciseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="exerciseModalTitle">Exercise Details</h2>
+                <button class="close-modal" onclick="closeExerciseModal()">&times;</button>
+            </div>
+            <div id="exerciseModalContent">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let currentUser = null;
+        let selectedFile = null;
+
+        // Check authentication
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            currentUser = JSON.parse(user);
+            document.getElementById('userName').textContent = currentUser.username;
+            
+            // Load dashboard data
+            loadDashboardData();
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            await Promise.all([
+                loadStats(),
+                loadAssignedExercises(),
+                loadRecentActivity()
+            ]);
+        }
+
+        async function loadStats() {
+            // TODO: Fetch real stats from API
+            document.getElementById('totalSessions').textContent = '24';
+            document.getElementById('thisWeek').textContent = '2';
+        }
+
+        async function loadAssignedExercises() {
+            const exercisesDiv = document.getElementById('assignedExercises');
+            
+            // Sample exercises (replace with API call)
+            const exercises = [
+                {
+                    name: 'Squat',
+                    sets: 3,
+                    reps: 12,
+                    notes: 'Focus on depth and knee alignment',
+                    videoUrl: 'https://example.com/squat-demo.mp4'
+                },
+                {
+                    name: 'Plank',
+                    sets: 3,
+                    reps: '30 seconds',
+                    notes: 'Keep core tight, neutral spine',
+                    videoUrl: 'https://example.com/plank-demo.mp4'
+                },
+                {
+                    name: 'Push-up',
+                    sets: 3,
+                    reps: 10,
+                    notes: 'Modified version if needed',
+                    videoUrl: 'https://example.com/pushup-demo.mp4'
+                }
+            ];
+
+            exercisesDiv.innerHTML = exercises.map(ex => `
+                <div class="exercise-card">
+                    <div class="video-thumbnail">🎥</div>
+                    <h4>${ex.name}</h4>
+                    <div class="exercise-details">
+                        <span class="badge badge-info">${ex.sets} sets</span>
+                        <span class="badge badge-success">${ex.reps} reps</span>
+                    </div>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">${ex.notes}</p>
+                    <button class="btn btn-secondary" style="width: 100%; margin-top: 15px;" onclick="viewExerciseDemo('${ex.name}')">
+                        📺 Watch Demo
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function loadRecentActivity() {
+            const activityDiv = document.getElementById('recentActivity');
+            activityDiv.innerHTML = '<p style="color: #999;">No recent activity. Upload your first video to get started!</p>';
+        }
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const videoFile = document.getElementById('videoFile');
+
+        uploadArea.addEventListener('click', () => videoFile.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('active');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('active');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('active');
+            const file = e.dataTransfer.files[0];
+            handleFileSelect(file);
+        });
+
+        videoFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleFileSelect(file);
+        });
+
+        function handleFileSelect(file) {
+            if (!file || !file.type.startsWith('video/')) {
+                showAlert('Please select a valid video file', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('uploadArea').style.display = 'none';
+            document.getElementById('videoInfo').style.display = 'block';
+        }
+
+        function cancelUpload() {
+            selectedFile = null;
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('videoInfo').style.display = 'none';
+            videoFile.value = '';
+        }
+
+        async function uploadAndAnalyze() {
+            if (!selectedFile) return;
+
+            const loading = document.getElementById('uploadLoading');
+            const videoInfo = document.getElementById('videoInfo');
+            
+            loading.style.display = 'block';
+            videoInfo.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('video', selectedFile);
+
+                const response = await fetch(`${API_URL}/api/videos/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showAlert('Video uploaded successfully! Analyzing...', 'success');
+                    
+                    // Analyze the video
+                    await analyzeVideo(data.video_id);
+                } else {
+                    throw new Error('Upload failed');
+                }
+            } catch (error) {
+                showAlert('Upload failed. Please try again.', 'error');
+                console.error('Upload error:', error);
+            } finally {
+                loading.style.display = 'none';
+                cancelUpload();
+            }
+        }
+
+        async function analyzeVideo(videoId) {
+            try {
+                const response = await fetch(`${API_URL}/api/videos/${videoId}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayAnalysisResult(data);
+                    loadRecentActivity(); // Refresh activity list
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+            }
+        }
+
+        function displayAnalysisResult(result) {
+            const resultDiv = document.getElementById('analysisResult');
+            resultDiv.innerHTML = `
+                <h3 style="color: #667eea; margin-bottom: 15px;">Analysis Complete! ✅</h3>
+                <div style="margin: 15px 0;">
+                    <span class="badge badge-info">Reps Detected: ${result.reps || 'N/A'}</span>
+                    <span class="badge badge-success">Form Score: ${result.form_score || 'N/A'}</span>
+                </div>
+                <p style="color: #666; margin-top: 15px;">${result.feedback || 'Good job! Keep up the great work.'}</p>
+                <button class="btn btn-primary" style="margin-top: 15px;" onclick="downloadReport(${result.video_id})">
+                    📄 Download Full Report
+                </button>
+            `;
+            resultDiv.style.display = 'block';
+        }
+
+        function downloadReport(videoId) {
+            window.open(`${API_URL}/api/videos/${videoId}/report`, '_blank');
+        }
+
+        function viewExerciseDemo(exerciseName) {
+            // Show modal with exercise demo
+            showAlert(`Playing demo for ${exerciseName}`, 'success');
+        }
+
+        function showExerciseLibrary() {
+            showAlert('Exercise library coming soon!', 'success');
+        }
+
+        function closeExerciseModal() {
+            document.getElementById('exerciseModal').style.display = 'none';
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type}`;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>
