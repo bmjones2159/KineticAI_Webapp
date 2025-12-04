@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Analysis Report - KineticAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .summary-card .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .summary-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .unit {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .video-box {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .video-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .video-placeholder {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #e0e0e0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .video-iframe {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-item .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .issues-list {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .issues-list h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .issue-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .issue-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+        }
+
+        .issue-content {
+            flex: 1;
+        }
+
+        .issue-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .issue-description {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .recommendations {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .recommendations h3 {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .recommendation-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 1s ease-out;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-right: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .comparison-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>Loading analysis report...</p>
+        </div>
+
+        <div id="reportContent" style="display: none;">
+            <div class="header">
+                <h1>📊 Exercise Analysis Report</h1>
+                <p class="subtitle" id="analysisDate"></p>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="label">Exercise Type</div>
+                    <div class="value" id="exerciseType">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Reps Completed</div>
+                    <div class="value" id="repsCompleted">0</div>
+                    <div class="unit">reps</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Form Score</div>
+                    <div class="value" id="formScore">0</div>
+                    <div class="unit">%</div>
+                </div>
+                <div class="summary-card">
+                    <div class="label">Calories Burned</div>
+                    <div class="value" id="caloriesBurned">0</div>
+                    <div class="unit">kcal</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Form Score Analysis</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%">
+                        <span id="progressText">0%</span>
+                    </div>
+                </div>
+                <p id="formFeedback" style="text-align: center; color: #666; margin-top: 10px;"></p>
+            </div>
+
+            <div class="section">
+                <h2>Video Comparison</h2>
+                <div class="comparison-container">
+                    <div class="video-box">
+                        <h3>📹 Your Exercise Video</h3>
+                        <div class="video-placeholder" id="userVideoPlaceholder">🎥</div>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <div class="stat-value" id="userReps">0</div>
+                                <div class="stat-label">Reps</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="userDuration">0s</div>
+                                <div class="stat-label">Duration</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="video-box">
+                        <h3>✅ Correct Form Demo</h3>
+                        <iframe class="video-iframe" id="demoVideo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <div class="stat-value">10-12</div>
+                                <div class="stat-label">Target Reps</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">Perfect</div>
+                                <div class="stat-label">Form</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="issuesSection" style="display: none;">
+                <h2>⚠️ Form Issues Detected</h2>
+                <div class="issues-list">
+                    <div id="issuesList"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>💡 Recommendations</h2>
+                <div class="recommendations">
+                    <div id="recommendationsList"></div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Print Report</button>
+                <button class="btn btn-primary" onclick="downloadPDF()">📄 Download PDF</button>
+                <button class="btn btn-secondary" onclick="goBack()">← Back to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        
+        // Get video ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('video_id');
+
+        if (!videoId) {
+            alert('No video ID provided');
+            window.location.href = 'patient-dashboard.html';
+        }
+
+        // Demo video URLs mapped to exercise types
+        const demoVideos = {
+            'leg_raise': 'https://www.youtube.com/embed/JB2oyawG9KI?rel=0&modestbranding=1',
+            'squat': 'https://www.youtube.com/embed/ultWZbUMPL8?rel=0&modestbranding=1',
+            'pushup': 'https://www.youtube.com/embed/IODxDxX7oi4?rel=0&modestbranding=1',
+            'plank': 'https://www.youtube.com/embed/pSHjTRCQxIw?rel=0&modestbranding=1',
+            'lunge': 'https://www.youtube.com/embed/QOVaHwm-Q6U?rel=0&modestbranding=1',
+            'bridge': 'https://www.youtube.com/embed/wPM8icPu6H8?rel=0&modestbranding=1'
+        };
+
+        async function loadReport() {
+            try {
+                const token = localStorage.getItem('token');
+                
+                // Fetch video details and analysis
+                const response = await fetch(`${API_URL}/api/videos/${videoId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load video data');
+                }
+
+                const data = await response.json();
+                displayReport(data);
+                
+            } catch (error) {
+                console.error('Error loading report:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <p style="color: red;">Failed to load report</p>
+                    <button class="btn btn-primary" onclick="goBack()">Back to Dashboard</button>
+                `;
+            }
+        }
+
+        function displayReport(data) {
+            // Hide loading, show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('reportContent').style.display = 'block';
+
+            // Decrypt and parse analysis results if encrypted
+            let results = data.analysis_results;
+            if (typeof results === 'string') {
+                try {
+                    results = JSON.parse(results);
+                } catch (e) {
+                    console.error('Failed to parse results:', e);
+                }
+            }
+
+            // Date
+            const date = new Date(data.uploaded_at || Date.now());
+            document.getElementById('analysisDate').textContent = `Analyzed on ${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
+
+            // Summary cards
+            const exerciseType = results?.exercise_type || 'Unknown';
+            document.getElementById('exerciseType').textContent = formatExerciseName(exerciseType);
+            document.getElementById('repsCompleted').textContent = results?.total_reps || results?.reps_completed || 0;
+            document.getElementById('formScore').textContent = Math.round(results?.average_accuracy || results?.form_score || 0);
+            document.getElementById('caloriesBurned').textContent = results?.calories_burned || Math.round((results?.total_reps || 0) * 0.5);
+
+            // Progress bar
+            const formScore = Math.round(results?.average_accuracy || results?.form_score || 0);
+            setTimeout(() => {
+                document.getElementById('progressBar').style.width = formScore + '%';
+                document.getElementById('progressText').textContent = formScore + '%';
+            }, 100);
+
+            // Form feedback
+            let feedback = '';
+            if (formScore >= 90) feedback = '🎉 Excellent form! Keep up the great work!';
+            else if (formScore >= 75) feedback = '👍 Good form! Minor improvements possible.';
+            else if (formScore >= 60) feedback = '⚠️ Fair form. Review recommendations below.';
+            else feedback = '⚠️ Form needs improvement. Please review issues carefully.';
+            document.getElementById('formFeedback').textContent = feedback;
+
+            // Video comparison
+            document.getElementById('userReps').textContent = results?.total_reps || 0;
+            document.getElementById('userDuration').textContent = Math.round((results?.total_frames || 0) / 30) + 's';
+
+            // Load demo video
+            const demoVideoUrl = demoVideos[exerciseType] || demoVideos['squat'];
+            document.getElementById('demoVideo').src = demoVideoUrl;
+
+            // Issues
+            if (results?.most_common_issues && results.most_common_issues.length > 0) {
+                document.getElementById('issuesSection').style.display = 'block';
+                const issuesList = document.getElementById('issuesList');
+                issuesList.innerHTML = results.most_common_issues.map(issue => `
+                    <div class="issue-item">
+                        <div class="issue-icon">⚠️</div>
+                        <div class="issue-content">
+                            <div class="issue-title">${issue}</div>
+                            <div class="issue-description">This issue was detected during analysis.</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Recommendations
+            const recommendations = generateRecommendations(exerciseType, formScore, results?.most_common_issues || []);
+            document.getElementById('recommendationsList').innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item">
+                    <div class="recommendation-icon">💡</div>
+                    <div class="issue-content">
+                        <div class="issue-title">${rec}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatExerciseName(type) {
+            const names = {
+                'leg_raise': 'Leg Raise',
+                'squat': 'Squat',
+                'pushup': 'Push-up',
+                'plank': 'Plank',
+                'lunge': 'Lunge',
+                'bridge': 'Bridge'
+            };
+            return names[type] || type.charAt(0).toUpperCase() + type.slice(1);
+        }
+
+        function generateRecommendations(exerciseType, formScore, issues) {
+            const recs = [
+                'Watch the demo video to see proper form',
+                'Practice the movement slowly at first',
+                'Focus on quality over quantity of reps'
+            ];
+
+            if (formScore < 80) {
+                recs.push('Consider working with your physical therapist on form');
+            }
+
+            if (issues.includes('Keep back straight')) {
+                recs.push('Focus on maintaining a neutral spine throughout the movement');
+            }
+
+            return recs;
+        }
+
+        function downloadPDF() {
+            alert('PDF download feature coming soon! For now, please use the Print function.');
+        }
+
+        function goBack() {
+            window.location.href = 'patient-dashboard.html';
+        }
+
+        // Load report on page load
+        loadReport();
+    </script>
+</body>
+</html>
