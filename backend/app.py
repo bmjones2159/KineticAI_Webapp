@@ -960,6 +960,40 @@ def seed_demo_videos():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/sessions', methods=['POST'])
+@jwt_required()
+def save_session():
+    """Save a workout session"""
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # Create session record
+        session = ExerciseSession(
+            user_id=current_user_id,
+            video_id=None,  # Not from video analysis
+            exercise_type=data.get('exercise_type', 'unknown'),
+            reps_completed=data.get('total_reps', 0),
+            form_score=None,  # Manual entry, no form score
+            duration_seconds=None,
+            calories_burned=data.get('total_reps', 0) * 0.5,
+            notes=json.dumps(data.get('sets', []))
+        )
+        
+        db.session.add(session)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'SESSION_SAVED', 'ExerciseSession', session.id,
+                 details=f"Exercise: {data.get('exercise_type')}, Reps: {data.get('total_reps')}")
+        
+        return jsonify({
+            'message': 'Session saved successfully',
+            'session_id': session.id
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Initialize database
 with app.app_context():
     db.create_all()
