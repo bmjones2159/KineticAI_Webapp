@@ -196,7 +196,7 @@ def compute_file_hash(file_path):
 @app.route('/')
 def index():
     """Serve the frontend homepage"""
-    frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'index.html')
+    frontend_path = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
     if os.path.exists(frontend_path):
         return send_file(frontend_path)
     else:
@@ -219,7 +219,7 @@ def index():
 @app.route('/<path:path>')
 def serve_static(path):
     """Serve static frontend files (CSS, JS, etc.)"""
-    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+    frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend')
     file_path = os.path.join(frontend_dir, path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return send_file(file_path)
@@ -818,3 +818,4 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
+    
