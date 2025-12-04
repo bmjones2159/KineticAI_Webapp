@@ -292,7 +292,7 @@ def login():
                 log_audit(user.id, 'LOGIN_FAILED_INACTIVE', 'User', user.id, success=False)
                 return jsonify({'error': 'Account is inactive'}), 403
             
-            access_token = create_access_token(identity=user.id)
+            access_token = create_access_token(identity=str(user.id))
             user.last_login = datetime.utcnow()
             db.session.commit()
             
@@ -319,7 +319,7 @@ def login():
 def upload_video():
     """Upload and encrypt video file"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         
         # Log request details for debugging
         app.logger.info(f"Upload request from user {current_user_id}")
@@ -408,7 +408,7 @@ def upload_video():
 def get_videos():
     """Get list of user's videos"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
         if user.role == 'admin':
@@ -436,7 +436,7 @@ def get_videos():
 def get_video(video_id):
     """Get video file"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         video = Video.query.get(video_id)
         
@@ -470,7 +470,7 @@ def get_video(video_id):
 def analyze_video(video_id):
     """Analyze video using Kinetic AI pose estimation"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         video = Video.query.get(video_id)
         
         if not video or video.is_deleted:
@@ -565,7 +565,7 @@ def analyze_video(video_id):
 def delete_video(video_id):
     """Soft delete video"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         video = Video.query.get(video_id)
         
@@ -590,7 +590,7 @@ def delete_video(video_id):
 def get_analysis_results(video_id):
     """Get detailed analysis results for a video"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         video = Video.query.get(video_id)
         
@@ -617,7 +617,7 @@ def get_analysis_results(video_id):
 def get_annotated_video(video_id):
     """Get annotated video with pose overlay"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         video = Video.query.get(video_id)
         
@@ -654,7 +654,7 @@ def get_annotated_video(video_id):
 def get_csv_data(video_id):
     """Get CSV export of skeletal data"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         video = Video.query.get(video_id)
         
@@ -682,7 +682,7 @@ def get_csv_data(video_id):
 def get_audit_logs():
     """Get audit logs (admin only)"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
         if user.role != 'admin':
@@ -717,7 +717,7 @@ def health_check():
 def get_progress_stats():
     """Get user's progress statistics"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         
         # Get time range from query params
         days = request.args.get('days', 30, type=int)
@@ -779,7 +779,7 @@ def get_progress_stats():
 def get_assigned_exercises():
     """Get user's assigned exercises"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         
         assignments = ExerciseAssignment.query.filter_by(
             patient_id=current_user_id,
@@ -809,7 +809,7 @@ def get_assigned_exercises():
 def assign_exercise():
     """Therapist assigns exercise to patient"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
         # Only therapists and admins can assign exercises
@@ -1033,7 +1033,7 @@ def seed_demo_videos():
 def save_session():
     """Save a workout session"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         data = request.get_json()
         
         # Create session record
