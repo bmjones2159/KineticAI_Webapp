@@ -474,6 +474,23 @@ def analyze_video(video_id):
         video.analysis_results = encrypt_data(analysis_results)
         db.session.commit()
         
+        # Create exercise session record for progress tracking
+        try:
+            session = ExerciseSession(
+                user_id=current_user_id,
+                video_id=video_id,
+                exercise_type=analysis_results.get('exercise_type', 'unknown'),
+                reps_completed=analysis_results.get('total_reps', 0),
+                form_score=analysis_results.get('average_accuracy', 0),
+                duration_seconds=int(analysis_results.get('total_frames', 0) / 30),  # Assuming 30 fps
+                calories_burned=analysis_results.get('total_reps', 0) * 0.5  # Rough estimate
+            )
+            db.session.add(session)
+            db.session.commit()
+        except Exception as session_error:
+            # Log but don't fail the analysis if session tracking fails
+            print(f"Session tracking error: {session_error}")
+        
         log_audit(current_user_id, 'VIDEO_ANALYZED', 'Video', video_id, 
                  details=f"Exercise: {analysis_results['exercise_type']}, Accuracy: {analysis_results['average_accuracy']}%")
         
@@ -644,6 +661,138 @@ def get_audit_logs():
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
+
+# Progress Tracking Endpoints
+@app.route('/api/progress/stats', methods=['GET'])
+@jwt_required()
+def get_progress_stats():
+    """Get user's progress statistics"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        # Get time range from query params
+        days = request.args.get('days', 30, type=int)
+        since_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get sessions in time range
+        sessions = ExerciseSession.query.filter(
+            ExerciseSession.user_id == current_user_id,
+            ExerciseSession.session_date >= since_date
+        ).all()
+        
+        # Calculate stats
+        total_sessions = len(sessions)
+        total_reps = sum(s.reps_completed or 0 for s in sessions)
+        avg_form_score = sum(s.form_score or 0 for s in sessions) / total_sessions if total_sessions > 0 else 0
+        total_calories = sum(s.calories_burned or 0 for s in sessions)
+        
+        # Group by date for chart data
+        sessions_by_date = {}
+        for session in sessions:
+            date_key = session.session_date.strftime('%Y-%m-%d')
+            if date_key not in sessions_by_date:
+                sessions_by_date[date_key] = {
+                    'date': date_key,
+                    'sessions': 0,
+                    'reps': 0,
+                    'avg_form_score': []
+                }
+            sessions_by_date[date_key]['sessions'] += 1
+            sessions_by_date[date_key]['reps'] += session.reps_completed or 0
+            sessions_by_date[date_key]['avg_form_score'].append(session.form_score or 0)
+        
+        # Calculate averages
+        chart_data = []
+        for date_key in sorted(sessions_by_date.keys()):
+            data = sessions_by_date[date_key]
+            chart_data.append({
+                'date': data['date'],
+                'sessions': data['sessions'],
+                'reps': data['reps'],
+                'avg_form_score': sum(data['avg_form_score']) / len(data['avg_form_score']) if data['avg_form_score'] else 0
+            })
+        
+        return jsonify({
+            'summary': {
+                'total_sessions': total_sessions,
+                'total_reps': total_reps,
+                'avg_form_score': round(avg_form_score, 1),
+                'total_calories': round(total_calories, 1)
+            },
+            'chart_data': chart_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/exercises/assigned', methods=['GET'])
+@jwt_required()
+def get_assigned_exercises():
+    """Get user's assigned exercises"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        assignments = ExerciseAssignment.query.filter_by(
+            patient_id=current_user_id,
+            is_active=True
+        ).all()
+        
+        result = []
+        for assignment in assignments:
+            result.append({
+                'id': assignment.id,
+                'exercise_type': assignment.exercise_type,
+                'sets': assignment.sets,
+                'reps': assignment.reps,
+                'weight': assignment.weight,
+                'frequency_per_week': assignment.frequency_per_week,
+                'instructions': assignment.instructions,
+                'assigned_at': assignment.assigned_at.isoformat()
+            })
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/exercises/assign', methods=['POST'])
+@jwt_required()
+def assign_exercise():
+    """Therapist assigns exercise to patient"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        # Only therapists and admins can assign exercises
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        
+        assignment = ExerciseAssignment(
+            patient_id=data['patient_id'],
+            therapist_id=current_user_id,
+            exercise_type=data['exercise_type'],
+            sets=data.get('sets', 3),
+            reps=data.get('reps', 12),
+            weight=data.get('weight', 0),
+            frequency_per_week=data.get('frequency_per_week', 3),
+            instructions=data.get('instructions', '')
+        )
+        
+        db.session.add(assignment)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'EXERCISE_ASSIGNED', 'ExerciseAssignment', assignment.id,
+                 details=f"Assigned {data['exercise_type']} to user {data['patient_id']}")
+        
+        return jsonify({
+            'message': 'Exercise assigned successfully',
+            'assignment_id': assignment.id
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Initialize database
 with app.app_context():
