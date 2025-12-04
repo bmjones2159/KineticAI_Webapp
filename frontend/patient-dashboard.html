@@ -553,47 +553,69 @@
         }
 
         async function loadAssignedExercises() {
-            const exercisesDiv = document.getElementById('assignedExercises');
-            
-            // Sample exercises (replace with API call)
-            const exercises = [
-                {
-                    name: 'Squat',
-                    sets: 3,
-                    reps: 12,
-                    notes: 'Focus on depth and knee alignment',
-                    videoUrl: 'https://example.com/squat-demo.mp4'
-                },
-                {
-                    name: 'Plank',
-                    sets: 3,
-                    reps: '30 seconds',
-                    notes: 'Keep core tight, neutral spine',
-                    videoUrl: 'https://example.com/plank-demo.mp4'
-                },
-                {
-                    name: 'Push-up',
-                    sets: 3,
-                    reps: 10,
-                    notes: 'Modified version if needed',
-                    videoUrl: 'https://example.com/pushup-demo.mp4'
-                }
-            ];
+            try {
+                const response = await fetch(`${API_URL}/api/demos`);
+                const demos = await response.json();
 
-            exercisesDiv.innerHTML = exercises.map(ex => `
-                <div class="exercise-card">
-                    <div class="video-thumbnail">🎥</div>
-                    <h4>${ex.name}</h4>
-                    <div class="exercise-details">
-                        <span class="badge badge-info">${ex.sets} sets</span>
-                        <span class="badge badge-success">${ex.reps} reps</span>
-                    </div>
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">${ex.notes}</p>
-                    <button class="btn btn-secondary" style="width: 100%; margin-top: 15px;" onclick="viewExerciseDemo('${ex.name}')">
-                        📺 Watch Demo
-                    </button>
-                </div>
-            `).join('');
+                const exercisesDiv = document.getElementById('assignedExercises');
+                
+                if (demos && demos.length > 0) {
+                    exercisesDiv.innerHTML = demos.map(exercise => `
+                        <div class="exercise-card" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
+                             onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" 
+                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';"
+                             onclick="goToExercise('${exercise.exercise_type}')">
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; flex-shrink: 0;">
+                                    ${getExerciseEmoji(exercise.exercise_type)}
+                                </div>
+                                <div style="flex: 1;">
+                                    <h4 style="margin: 0 0 8px 0; color: #1a2332;">${exercise.title}</h4>
+                                    <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9em;">${exercise.description || ''}</p>
+                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <span class="badge badge-info">💪 ${exercise.target_muscles}</span>
+                                        <span class="badge badge-success">📊 ${exercise.difficulty_level || 'Beginner'}</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" style="white-space: nowrap; pointer-events: none;">
+                                    Start →
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    exercisesDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 40px 0;">No exercises available. Please contact your therapist to get exercise assignments.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading exercises:', error);
+                document.getElementById('assignedExercises').innerHTML = '<p style="text-align: center; color: #c33;">Failed to load exercises. Please refresh the page.</p>';
+            }
+        }
+
+        function getExerciseEmoji(type) {
+            const emojis = {
+                'leg_raise': '🦵',
+                'squat': '🏋️',
+                'pushup': '💪',
+                'plank': '🧘',
+                'lunge': '🦿',
+                'bridge': '🌉'
+            };
+            return emojis[type] || '💪';
+        }
+
+        function goToExercise(exerciseType) {
+            window.location.href = `exercise-detail.html?type=${exerciseType}`;
+        }
+
+        function showExerciseLibrary() {
+            document.getElementById('assignedExercises').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function viewExerciseDemo(exerciseName) {
+            // Convert name to type
+            const type = exerciseName.toLowerCase().replace(/\s+/g, '_');
+            goToExercise(type);
         }
 
         async function loadRecentActivity() {
@@ -650,6 +672,18 @@
         async function uploadAndAnalyze() {
             if (!selectedFile) return;
 
+            // Check file size (max 500MB)
+            const maxSize = 500 * 1024 * 1024; // 500MB
+            if (selectedFile.size > maxSize) {
+                showAlert(`File too large! Maximum size is 500MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB`, 'error');
+                return;
+            }
+
+            console.log('Starting upload...');
+            console.log('File name:', selectedFile.name);
+            console.log('File size:', (selectedFile.size / 1024 / 1024).toFixed(2), 'MB');
+            console.log('File type:', selectedFile.type);
+
             const loading = document.getElementById('uploadLoading');
             const videoInfo = document.getElementById('videoInfo');
             
@@ -657,29 +691,40 @@
             videoInfo.style.display = 'none';
 
             try {
+                const token = localStorage.getItem('token');
+                console.log('Token exists:', !!token);
+
                 const formData = new FormData();
                 formData.append('video', selectedFile);
+
+                console.log('Sending request to:', `${API_URL}/api/videos/upload`);
 
                 const response = await fetch(`${API_URL}/api/videos/upload`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: formData
                 });
 
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
                 if (response.ok) {
-                    const data = await response.json();
                     showAlert('Video uploaded successfully! Analyzing...', 'success');
                     
                     // Analyze the video
                     await analyzeVideo(data.video_id);
                 } else {
-                    throw new Error('Upload failed');
+                    throw new Error(data.error || data.details || 'Upload failed');
                 }
             } catch (error) {
-                showAlert('Upload failed. Please try again.', 'error');
                 console.error('Upload error:', error);
+                console.error('Error stack:', error.stack);
+                showAlert(`Upload failed: ${error.message}. Check console for details.`, 'error');
             } finally {
                 loading.style.display = 'none';
                 cancelUpload();
