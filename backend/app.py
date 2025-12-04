@@ -147,6 +147,20 @@ class ExerciseSession(db.Model):
     session_date = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text)
 
+class DemoVideo(db.Model):
+    __tablename__ = 'demo_videos'
+    id = db.Column(db.Integer, primary_key=True)
+    exercise_type = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    video_url = db.Column(db.String(500), nullable=False)
+    thumbnail_url = db.Column(db.String(500))
+    duration_seconds = db.Column(db.Integer)
+    difficulty_level = db.Column(db.String(20))
+    target_muscles = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
 # Utility functions
 def log_audit(user_id, action, resource_type=None, resource_id=None, details=None, success=True):
     """Log all actions for HIPAA compliance"""
@@ -794,6 +808,123 @@ def assign_exercise():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Demo Video Endpoints
+@app.route('/api/demos', methods=['GET'])
+def get_demo_videos():
+    """Get all demo videos"""
+    try:
+        exercise_type = request.args.get('exercise_type')
+        
+        query = DemoVideo.query.filter_by(is_active=True)
+        
+        if exercise_type:
+            query = query.filter_by(exercise_type=exercise_type)
+        
+        demos = query.all()
+        
+        result = []
+        for demo in demos:
+            result.append({
+                'id': demo.id,
+                'exercise_type': demo.exercise_type,
+                'title': demo.title,
+                'description': demo.description,
+                'video_url': demo.video_url,
+                'thumbnail_url': demo.thumbnail_url,
+                'duration_seconds': demo.duration_seconds,
+                'difficulty_level': demo.difficulty_level,
+                'target_muscles': demo.target_muscles
+            })
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/demos/seed', methods=['POST'])
+def seed_demo_videos():
+    """Seed database with demo videos"""
+    try:
+        demos = [
+            {
+                'exercise_type': 'squat',
+                'title': 'Perfect Squat Form',
+                'description': 'Learn proper squat technique with step-by-step instructions',
+                'video_url': 'https://www.youtube.com/embed/ultWZbUMPL8',
+                'thumbnail_url': 'https://img.youtube.com/vi/ultWZbUMPL8/mqdefault.jpg',
+                'duration_seconds': 180,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Quads, Glutes, Hamstrings'
+            },
+            {
+                'exercise_type': 'pushup',
+                'title': 'Push-up Fundamentals',
+                'description': 'Master the perfect push-up with proper form',
+                'video_url': 'https://www.youtube.com/embed/IODxDxX7oi4',
+                'thumbnail_url': 'https://img.youtube.com/vi/IODxDxX7oi4/mqdefault.jpg',
+                'duration_seconds': 240,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Chest, Triceps, Shoulders'
+            },
+            {
+                'exercise_type': 'plank',
+                'title': 'Plank Hold Technique',
+                'description': 'Build core strength with proper plank form',
+                'video_url': 'https://www.youtube.com/embed/pSHjTRCQxIw',
+                'thumbnail_url': 'https://img.youtube.com/vi/pSHjTRCQxIw/mqdefault.jpg',
+                'duration_seconds': 150,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Core, Abs, Lower Back'
+            },
+            {
+                'exercise_type': 'lunge',
+                'title': 'Forward Lunge Form',
+                'description': 'Perfect your lunge technique for leg strength',
+                'video_url': 'https://www.youtube.com/embed/QOVaHwm-Q6U',
+                'thumbnail_url': 'https://img.youtube.com/vi/QOVaHwm-Q6U/mqdefault.jpg',
+                'duration_seconds': 200,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Quads, Glutes, Hamstrings'
+            },
+            {
+                'exercise_type': 'leg_raise',
+                'title': 'Lying Leg-Hip Raise',
+                'description': 'Strengthen lower abs and hip flexors',
+                'video_url': 'https://www.youtube.com/embed/JB2oyawG9KI',
+                'thumbnail_url': 'https://img.youtube.com/vi/JB2oyawG9KI/mqdefault.jpg',
+                'duration_seconds': 180,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Lower Abs, Hip Flexors'
+            },
+            {
+                'exercise_type': 'bridge',
+                'title': 'Glute Bridge Tutorial',
+                'description': 'Strengthen glutes and hamstrings',
+                'video_url': 'https://www.youtube.com/embed/wPM8icPu6H8',
+                'thumbnail_url': 'https://img.youtube.com/vi/wPM8icPu6H8/mqdefault.jpg',
+                'duration_seconds': 180,
+                'difficulty_level': 'beginner',
+                'target_muscles': 'Glutes, Hamstrings, Lower Back'
+            }
+        ]
+        
+        for demo_data in demos:
+            existing = DemoVideo.query.filter_by(
+                exercise_type=demo_data['exercise_type'],
+                title=demo_data['title']
+            ).first()
+            
+            if not existing:
+                demo = DemoVideo(**demo_data)
+                db.session.add(demo)
+        
+        db.session.commit()
+        
+        return jsonify({'message': f'Successfully seeded {len(demos)} demo videos'}), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Initialize database
 with app.app_context():
     db.create_all()
@@ -818,4 +949,3 @@ with app.app_context():
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
-    
