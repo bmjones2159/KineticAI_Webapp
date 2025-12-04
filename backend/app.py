@@ -843,6 +843,74 @@ def assign_exercise():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Admin Endpoints
+@app.route('/api/admin/init-db', methods=['POST'])
+def init_database():
+    """Initialize database tables"""
+    try:
+        db.create_all()
+        return jsonify({'message': 'Database tables created successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/create-demo-users', methods=['POST'])
+def create_demo_users():
+    """Create demo users with correct roles"""
+    try:
+        demo_users = [
+            {
+                'username': 'patient',
+                'email': 'patient@kineticai.com',
+                'password': 'patient123',
+                'role': 'user'
+            },
+            {
+                'username': 'therapist',
+                'email': 'therapist@kineticai.com',
+                'password': 'therapist123',
+                'role': 'clinician'
+            },
+            {
+                'username': 'admin',
+                'email': 'admin@kineticai.com',
+                'password': 'admin123',
+                'role': 'admin'
+            }
+        ]
+        
+        created_users = []
+        for user_data in demo_users:
+            # Check if user already exists
+            existing = User.query.filter_by(username=user_data['username']).first()
+            if existing:
+                # Update role if needed
+                if existing.role != user_data['role']:
+                    existing.role = user_data['role']
+                    db.session.commit()
+                    created_users.append(f"Updated {user_data['username']} role to {user_data['role']}")
+                else:
+                    created_users.append(f"{user_data['username']} already exists with correct role")
+            else:
+                # Create new user
+                password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+                new_user = User(
+                    username=user_data['username'],
+                    email=user_data['email'],
+                    password_hash=password_hash,
+                    role=user_data['role']
+                )
+                db.session.add(new_user)
+                db.session.commit()
+                created_users.append(f"Created {user_data['username']} with role {user_data['role']}")
+        
+        return jsonify({
+            'message': 'Demo users processed successfully',
+            'details': created_users
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Demo Video Endpoints
 @app.route('/api/demos', methods=['GET'])
 def get_demo_videos():
