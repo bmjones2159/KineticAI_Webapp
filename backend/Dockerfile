@@ -20,13 +20,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY backend/ .
 
-# Copy frontend files
-COPY frontend/ ./frontend/
+# Copy frontend files explicitly to /app/frontend/
+COPY frontend/ /app/frontend/
+
+# Verify files were copied (for debugging)
+RUN ls -la /app/frontend/ || echo "Frontend directory not found!"
 
 # Create necessary directories
 RUN mkdir -p /encrypted_storage/videos /app/logs && \
     chmod -R 755 /app
-
 # Expose port
 EXPOSE 5000
 
