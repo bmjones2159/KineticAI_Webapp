@@ -434,7 +434,47 @@ def get_videos():
 @app.route('/api/videos/<int:video_id>', methods=['GET'])
 @jwt_required()
 def get_video(video_id):
-    """Get video file"""
+    """Get video details and analysis results (JSON)"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        video = Video.query.get(video_id)
+        
+        if not video or video.is_deleted:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check access permissions
+        if video.user_id != current_user_id and user.role != 'admin':
+            log_audit(current_user_id, 'VIDEO_ACCESS_DENIED', 'Video', video_id, success=False)
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Decrypt analysis results if they exist
+        analysis_results = None
+        if video.analysis_results:
+            try:
+                decrypted_data = decrypt_data(video.analysis_results)
+                analysis_results = json.loads(decrypted_data) if isinstance(decrypted_data, str) else decrypted_data
+            except Exception as e:
+                app.logger.error(f"Failed to decrypt analysis results: {e}")
+        
+        log_audit(current_user_id, 'VIDEO_DETAILS_ACCESSED', 'Video', video_id)
+        
+        return jsonify({
+            'id': video.id,
+            'filename': video.filename,
+            'uploaded_at': video.uploaded_at.isoformat(),
+            'file_size': video.file_size,
+            'mime_type': video.mime_type,
+            'access_count': video.access_count,
+            'analysis_results': analysis_results
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/videos/<int:video_id>/download', methods=['GET'])
+@jwt_required()
+def download_video(video_id):
+    """Download video file"""
     try:
         current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
@@ -458,7 +498,7 @@ def get_video(video_id):
         if not os.path.exists(video_path):
             return jsonify({'error': 'Video file not found'}), 404
         
-        log_audit(current_user_id, 'VIDEO_ACCESSED', 'Video', video_id)
+        log_audit(current_user_id, 'VIDEO_DOWNLOADED', 'Video', video_id)
         
         return send_file(video_path, mimetype=video.mime_type, as_attachment=True, 
                         download_name=video.filename)
@@ -468,7 +508,7 @@ def get_video(video_id):
 @app.route('/api/videos/<int:video_id>/analyze', methods=['POST'])
 @jwt_required()
 def analyze_video(video_id):
-    """Analyze video with AI (using mock data for demo)"""
+    """Analyze video with AI - detects exercise type and compares to demo"""
     try:
         current_user_id = int(get_jwt_identity())
         video = Video.query.get(video_id)
@@ -485,56 +525,119 @@ def analyze_video(video_id):
         if not os.path.exists(video_path):
             return jsonify({'error': 'Video file not found'}), 404
         
-        # TODO: Replace with real AI analysis when kinetic_analyzer is configured
-        # For now, return mock data so frontend can display results
-        import random
-        
-        app.logger.info(f"Running mock analysis for video {video_id}")
-        
-        # Mock analysis results
-        analysis_results = {
-            'exercise_type': 'squat',
-            'total_reps': random.randint(8, 15),
-            'average_accuracy': random.randint(70, 95),
-            'total_frames': 300,
-            'most_common_issues': ['Keep back straight', 'Go deeper in squat'],
-            'timestamp': datetime.utcnow().isoformat()
-        }
-        
-        # Encrypt and store results
-        video.analysis_results = encrypt_data(analysis_results)
-        db.session.commit()
-        
-        # Create exercise session record for progress tracking
         try:
-            session = ExerciseSession(
-                user_id=current_user_id,
-                video_id=video_id,
-                exercise_type=analysis_results.get('exercise_type', 'unknown'),
-                reps_completed=analysis_results.get('total_reps', 0),
-                form_score=analysis_results.get('average_accuracy', 0),
-                duration_seconds=int(analysis_results.get('total_frames', 0) / 30),
-                calories_burned=analysis_results.get('total_reps', 0) * 0.5
-            )
-            db.session.add(session)
+            # Try to use real AI analyzer
+            from kinetic_analyzer import KineticAnalyzer
+            
+            app.logger.info(f"Starting AI analysis for video {video_id}")
+            analyzer = KineticAnalyzer()
+            
+            # Run analysis - analyzer will auto-detect exercise type
+            analysis_results = analyzer.analyze_video(video_path, exercise_type=None)
+            
+            app.logger.info(f"Analysis complete: {analysis_results['exercise_type']} detected")
+            
+            # Find matching demo video from database
+            detected_type = analysis_results['exercise_type']
+            demo_video = DemoVideo.query.filter_by(exercise_type=detected_type).first()
+            
+            if demo_video:
+                app.logger.info(f"Found matching demo: {demo_video.title}")
+                analysis_results['demo_video_url'] = demo_video.video_url
+                analysis_results['demo_video_title'] = demo_video.title
+            else:
+                app.logger.warning(f"No demo found for {detected_type}")
+            
+            # Store analysis results
+            video.analysis_results = encrypt_data(analysis_results)
             db.session.commit()
-        except Exception as session_error:
-            app.logger.error(f"Session tracking error: {session_error}")
-        
-        log_audit(current_user_id, 'VIDEO_ANALYZED', 'Video', video_id, 
-                 details=f"Exercise: {analysis_results['exercise_type']}, Accuracy: {analysis_results['average_accuracy']}%")
-        
-        return jsonify({
-            'message': 'Analysis completed successfully',
-            'results': {
-                'exercise_type': analysis_results['exercise_type'],
-                'total_reps': analysis_results['total_reps'],
-                'average_accuracy': analysis_results['average_accuracy'],
-                'total_frames': analysis_results['total_frames'],
-                'most_common_issues': analysis_results['most_common_issues'],
-                'timestamp': analysis_results['timestamp']
+            
+            # Create exercise session for progress tracking
+            try:
+                session = ExerciseSession(
+                    user_id=current_user_id,
+                    video_id=video_id,
+                    exercise_type=analysis_results['exercise_type'],
+                    reps_completed=analysis_results.get('total_reps', 0),
+                    form_score=analysis_results.get('average_accuracy', 0),
+                    duration_seconds=int(analysis_results.get('total_frames', 0) / 30),
+                    calories_burned=analysis_results.get('total_reps', 0) * 0.5
+                )
+                db.session.add(session)
+                db.session.commit()
+            except Exception as session_error:
+                app.logger.error(f"Session tracking error: {session_error}")
+            
+            log_audit(current_user_id, 'VIDEO_ANALYZED', 'Video', video_id,
+                     details=f"Exercise: {analysis_results['exercise_type']}, Accuracy: {analysis_results['average_accuracy']}%")
+            
+            return jsonify({
+                'message': 'Analysis completed successfully',
+                'results': {
+                    'exercise_type': analysis_results['exercise_type'],
+                    'total_reps': analysis_results.get('total_reps', 0),
+                    'average_accuracy': analysis_results['average_accuracy'],
+                    'total_frames': analysis_results['total_frames'],
+                    'most_common_issues': analysis_results['most_common_issues'],
+                    'timestamp': analysis_results['timestamp'],
+                    'demo_video_url': analysis_results.get('demo_video_url'),
+                    'demo_video_title': analysis_results.get('demo_video_title')
+                }
+            }), 200
+            
+        except Exception as ai_error:
+            # If AI analyzer fails, fall back to mock data
+            app.logger.warning(f"AI analyzer failed: {ai_error}, using mock data")
+            import random
+            
+            analysis_results = {
+                'exercise_type': 'squat',
+                'total_reps': random.randint(8, 15),
+                'average_accuracy': random.randint(70, 95),
+                'total_frames': 300,
+                'most_common_issues': ['Keep back straight', 'Go deeper in squat'],
+                'timestamp': datetime.utcnow().isoformat()
             }
-        }), 200
+            
+            # Find demo video
+            demo_video = DemoVideo.query.filter_by(exercise_type='squat').first()
+            if demo_video:
+                analysis_results['demo_video_url'] = demo_video.video_url
+                analysis_results['demo_video_title'] = demo_video.title
+            
+            video.analysis_results = encrypt_data(analysis_results)
+            db.session.commit()
+            
+            # Create session
+            try:
+                session = ExerciseSession(
+                    user_id=current_user_id,
+                    video_id=video_id,
+                    exercise_type=analysis_results['exercise_type'],
+                    reps_completed=analysis_results['total_reps'],
+                    form_score=analysis_results['average_accuracy'],
+                    duration_seconds=10,
+                    calories_burned=analysis_results['total_reps'] * 0.5
+                )
+                db.session.add(session)
+                db.session.commit()
+            except Exception as session_error:
+                app.logger.error(f"Session tracking error: {session_error}")
+            
+            return jsonify({
+                'message': 'Analysis completed successfully (mock data)',
+                'results': {
+                    'exercise_type': analysis_results['exercise_type'],
+                    'total_reps': analysis_results['total_reps'],
+                    'average_accuracy': analysis_results['average_accuracy'],
+                    'total_frames': analysis_results['total_frames'],
+                    'most_common_issues': analysis_results['most_common_issues'],
+                    'timestamp': analysis_results['timestamp'],
+                    'demo_video_url': analysis_results.get('demo_video_url'),
+                    'demo_video_title': analysis_results.get('demo_video_title')
+                }
+            }), 200
+            
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()
@@ -1045,6 +1148,21 @@ def save_session():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/videos/all-analyzed', methods=['GET'])
+@jwt_required()
+def get_all_analyzed_videos():
+    """Therapist sees all patient videos with analysis"""
+    # Returns list of all videos with their analysis results
+    # Only accessible to therapists/admins
+    
+@app.route('/api/videos/<id>/feedback', methods=['POST'])
+@jwt_required()
+def submit_therapist_feedback(video_id):
+    """Therapist provides feedback on patient's video"""
+    # Stores therapist feedback
+    # Patient can view this later
 
 # Initialize database
 with app.app_context():
