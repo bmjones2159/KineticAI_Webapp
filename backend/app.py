@@ -20,7 +20,14 @@ import json
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -35,7 +42,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
-app.config['UPLOAD_FOLDER'] = '/encrypted_storage/videos'
+
+# Upload folder - use /tmp for Render (ephemeral storage)
+# In production, you'd want to use cloud storage (S3, GCS, etc.)
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', '/tmp/encrypted_storage/videos')
 
 # Fix ENCRYPTION_KEY (must be bytes, not string)
 encryption_key = os.environ.get('ENCRYPTION_KEY')
@@ -311,8 +321,14 @@ def upload_video():
     try:
         current_user_id = get_jwt_identity()
         
+        # Log request details for debugging
+        app.logger.info(f"Upload request from user {current_user_id}")
+        app.logger.info(f"Content-Type: {request.content_type}")
+        app.logger.info(f"Files in request: {list(request.files.keys())}")
+        
         if 'video' not in request.files:
-            return jsonify({'error': 'No video file provided'}), 400
+            app.logger.error("No 'video' field in request.files")
+            return jsonify({'error': 'No video file provided', 'available_fields': list(request.files.keys())}), 400
         
         video_file = request.files['video']
         patient_id = request.form.get('patient_id', '')
@@ -321,16 +337,29 @@ def upload_video():
         if video_file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
         
+        app.logger.info(f"Uploading file: {video_file.filename}, size: {video_file.content_length}")
+        
         # Generate encrypted filename
         original_filename = video_file.filename
         encrypted_filename = secrets.token_hex(16) + os.path.splitext(original_filename)[1]
         
         # Ensure upload directory exists
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        try:
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            app.logger.info(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
+        except Exception as dir_error:
+            app.logger.error(f"Failed to create upload directory: {dir_error}")
+            return jsonify({'error': f'Server storage error: {str(dir_error)}'}), 500
         
         # Save file temporarily
         temp_path = os.path.join(app.config['UPLOAD_FOLDER'], encrypted_filename)
-        video_file.save(temp_path)
+        
+        try:
+            video_file.save(temp_path)
+            app.logger.info(f"File saved to: {temp_path}")
+        except Exception as save_error:
+            app.logger.error(f"Failed to save file: {save_error}")
+            return jsonify({'error': f'Failed to save file: {str(save_error)}'}), 500
         
         # Compute file hash for integrity
         file_hash = compute_file_hash(temp_path)
@@ -358,15 +387,21 @@ def upload_video():
         log_audit(current_user_id, 'VIDEO_UPLOADED', 'Video', new_video.id, 
                  details=f"Filename: {original_filename}, Size: {file_size}")
         
+        app.logger.info(f"Upload successful! Video ID: {new_video.id}")
+        
         return jsonify({
             'message': 'Video uploaded successfully',
             'video_id': new_video.id,
             'filename': original_filename
         }), 201
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        app.logger.error(f"Upload error: {e}")
+        app.logger.error(f"Traceback: {error_trace}")
         log_audit(current_user_id if 'current_user_id' in locals() else None, 
-                 'VIDEO_UPLOAD_FAILED', details=str(e), success=False)
-        return jsonify({'error': str(e)}), 500
+                 'VIDEO_UPLOAD_FAILED', details=f"{str(e)}\n{error_trace}", success=False)
+        return jsonify({'error': str(e), 'details': 'Check server logs for more information'}), 500
 
 @app.route('/api/videos', methods=['GET'])
 @jwt_required()
