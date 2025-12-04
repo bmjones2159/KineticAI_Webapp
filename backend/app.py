@@ -120,6 +120,33 @@ class AccessControl(db.Model):
     granted_at = db.Column(db.DateTime, default=datetime.utcnow)
     granted_by = db.Column(db.Integer, db.ForeignKey('users.id'))
 
+class ExerciseAssignment(db.Model):
+    __tablename__ = 'exercise_assignments'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    exercise_type = db.Column(db.String(50), nullable=False)  # squat, pushup, plank, etc.
+    sets = db.Column(db.Integer, default=3)
+    reps = db.Column(db.Integer, default=12)
+    weight = db.Column(db.Float, default=0)  # in lbs
+    frequency_per_week = db.Column(db.Integer, default=3)
+    instructions = db.Column(db.Text)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)
+
+class ExerciseSession(db.Model):
+    __tablename__ = 'exercise_sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    exercise_type = db.Column(db.String(50), nullable=False)
+    reps_completed = db.Column(db.Integer)
+    form_score = db.Column(db.Float)  # 0-100
+    duration_seconds = db.Column(db.Integer)
+    calories_burned = db.Column(db.Float)
+    session_date = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+
 # Utility functions
 def log_audit(user_id, action, resource_type=None, resource_id=None, details=None, success=True):
     """Log all actions for HIPAA compliance"""
@@ -169,7 +196,7 @@ def compute_file_hash(file_path):
 @app.route('/')
 def index():
     """Serve the frontend homepage"""
-    frontend_path = os.path.join(os.path.dirname(__file__), 'frontend', 'index.html')
+    frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'index.html')
     if os.path.exists(frontend_path):
         return send_file(frontend_path)
     else:
@@ -192,7 +219,7 @@ def index():
 @app.route('/<path:path>')
 def serve_static(path):
     """Serve static frontend files (CSS, JS, etc.)"""
-    frontend_dir = os.path.join(os.path.dirname(__file__), 'frontend')
+    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
     file_path = os.path.join(frontend_dir, path)
     if os.path.exists(file_path) and os.path.isfile(file_path):
         return send_file(file_path)
