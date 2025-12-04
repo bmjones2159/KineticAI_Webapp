@@ -742,11 +742,28 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    displayAnalysisResult(data);
+                    console.log('Analysis response:', data);
+                    
+                    // Backend returns: { results: { exercise_type, average_accuracy, total_frames, ... } }
+                    // Convert to format displayAnalysisResult expects
+                    const displayData = {
+                        video_id: videoId,
+                        reps: data.results?.total_reps || 0,
+                        form_score: data.results?.average_accuracy || 0,
+                        feedback: data.results?.most_common_issues?.join(', ') || 'Good job! Keep up the great work.',
+                        exercise_type: data.results?.exercise_type || 'unknown'
+                    };
+                    
+                    displayAnalysisResult(displayData);
                     loadRecentActivity(); // Refresh activity list
+                } else {
+                    const errorData = await response.json();
+                    console.error('Analysis failed:', errorData);
+                    showAlert(`Analysis failed: ${errorData.error || 'Unknown error'}`, 'error');
                 }
             } catch (error) {
                 console.error('Analysis error:', error);
+                showAlert('Analysis failed. Please try again.', 'error');
             }
         }
 
