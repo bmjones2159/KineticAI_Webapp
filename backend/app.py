@@ -312,12 +312,12 @@ def login():
             return jsonify({'error': 'Invalid credentials'}), 401
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-# REPLACE the upload_video endpoint in app.py with this optimized version
+
 
 @app.route('/api/videos/upload', methods=['POST'])
 @jwt_required()
 def upload_video():
-    """Upload video file - OPTIMIZED VERSION (no encryption for speed)"""
+    """Upload video file - with automatic folder creation"""
     try:
         current_user_id = int(get_jwt_identity())
         
@@ -338,19 +338,26 @@ def upload_video():
         if file_ext not in allowed_extensions:
             return jsonify({'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'}), 400
         
+        # CRITICAL: Ensure upload folder exists
+        upload_folder = app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        app.logger.info(f"Upload folder ready: {upload_folder}")
+        
         # Generate unique filename
         import secrets
         unique_id = secrets.token_hex(16)
         safe_filename = f"{unique_id}.{file_ext}"
         
-        # Save directly to upload folder (NO ENCRYPTION for speed)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+        # Full file path
+        file_path = os.path.join(upload_folder, safe_filename)
         
         app.logger.info(f"Saving file to: {file_path}")
+        
+        # Save file
         file.save(file_path)
         
         file_size = os.path.getsize(file_path)
-        app.logger.info(f"File saved: {file_size} bytes")
+        app.logger.info(f"File saved successfully: {file_size} bytes")
         
         # Calculate file hash for integrity
         import hashlib
@@ -361,7 +368,7 @@ def upload_video():
         video = Video(
             user_id=current_user_id,
             filename=file.filename,
-            encrypted_filename=safe_filename,  # Not actually encrypted, just unique name
+            encrypted_filename=safe_filename,
             file_hash=file_hash,
             file_size=file_size,
             mime_type=file.content_type or f'video/{file_ext}'
@@ -372,7 +379,7 @@ def upload_video():
         log_audit(current_user_id, 'VIDEO_UPLOADED', 'Video', video.id, 
                  details=f"Filename: {file.filename}, Size: {file_size}")
         
-        app.logger.info(f"Video uploaded successfully: ID {video.id}")
+        app.logger.info(f"✓ Video uploaded successfully: ID {video.id}")
         
         return jsonify({
             'message': 'Video uploaded successfully',
@@ -384,8 +391,14 @@ def upload_video():
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Upload error: {error_details}")
+        
+        # Rollback database changes
+        if 'video' in locals():
+            db.session.rollback()
+        
         log_audit(current_user_id if 'current_user_id' in locals() else None,
                  'VIDEO_UPLOAD_FAILED', details=error_details, success=False)
+        
         return jsonify({'error': str(e), 'details': error_details}), 500
 
 
