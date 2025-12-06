@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Management - KineticAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            color: #10b981;
+            font-size: 1.5em;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.95em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid #10b981;
+            color: #10b981;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section-header h2 {
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .patient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .patient-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #10b981;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .patient-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .patient-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .patient-status {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .patient-info {
+            color: #666;
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+
+        .patient-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-header h2 {
+            color: #10b981;
+            font-size: 1.5em;
+        }
+
+        .close-btn {
+            font-size: 1.8em;
+            color: #666;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95em;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Patient Detail Styles */
+        .detail-section {
+            margin-bottom: 25px;
+        }
+
+        .detail-section h3 {
+            color: #10b981;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .workout-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #10b981;
+        }
+
+        .workout-date {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .workout-metrics {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .patient-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .patient-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>👥 Patient Management</h1>
+        <div class="nav-buttons">
+            <a href="therapist-dashboard.html" class="btn btn-primary">← Back to Dashboard</a>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="content-section">
+            <div class="section-header">
+                <h2>My Patients</h2>
+                <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add New Patient</button>
+            </div>
+
+            <div id="loadingState" class="loading">
+                <div class="spinner"></div>
+                <p>Loading patients...</p>
+            </div>
+
+            <div id="patientGrid" class="patient-grid" style="display: none;"></div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">👥</div>
+                <h3>No Patients Yet</h3>
+                <p>Click "Add New Patient" to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Patient Modal -->
+    <div id="addPatientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Patient</h2>
+                <button class="close-btn" onclick="closeAddPatientModal()">×</button>
+            </div>
+
+            <div id="addPatientAlert"></div>
+
+            <form id="addPatientForm" onsubmit="createPatient(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="dateOfBirth">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="phone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" id="username" required placeholder="e.g., johnsmith">
+                </div>
+
+                <div class="form-group">
+                    <label>Temporary Password *</label>
+                    <input type="text" id="password" value="Patient123!" required>
+                    <small style="color: #666;">Patient can change this after first login</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Primary Diagnosis *</label>
+                    <input type="text" id="diagnosis" required placeholder="e.g., ACL reconstruction, post-op week 6">
+                </div>
+
+                <div class="form-group">
+                    <label>Injury Date</label>
+                    <input type="date" id="injuryDate">
+                </div>
+
+                <div class="form-group">
+                    <label>Treatment Goals</label>
+                    <textarea id="treatmentGoals" placeholder="e.g., Restore full range of motion, return to sports activity"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create Patient</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Patient Detail Modal -->
+    <div id="patientDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2 id="detailPatientName">Patient Details</h2>
+                <button class="close-btn" onclick="closePatientDetailModal()">×</button>
+            </div>
+
+            <div id="patientDetailContent"></div>
+
+            <div style="margin-top: 25px;">
+                <button class="btn btn-secondary" onclick="closePatientDetailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let allPatients = [];
+
+        async function loadPatients() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load patients');
+
+                const data = await response.json();
+                allPatients = data.patients || [];
+                displayPatients(allPatients);
+
+            } catch (error) {
+                console.error('Error loading patients:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <p style="color: red;">Failed to load patients</p>
+                    <button class="btn btn-primary" onclick="loadPatients()">Retry</button>
+                `;
+            }
+        }
+
+        function displayPatients(patients) {
+            document.getElementById('loadingState').style.display = 'none';
+
+            if (!patients || patients.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('patientGrid').style.display = 'grid';
+
+            const patientHtml = patients.map(p => {
+                const lastSession = p.last_session ? new Date(p.last_session).toLocaleDateString() : 'Never';
+                
+                return `
+                    <div class="patient-card" onclick="viewPatientDetails(${p.id})">
+                        <div class="patient-header">
+                            <div class="patient-name">${p.full_name || p.username}</div>
+                            <div class="patient-status">${p.current_status || 'Active'}</div>
+                        </div>
+
+                        <div class="patient-info">
+                            <strong>Diagnosis:</strong> ${p.primary_diagnosis || 'Not specified'}
+                        </div>
+
+                        <div class="patient-info">
+                            <strong>Last Session:</strong> ${lastSession}
+                        </div>
+
+                        <div class="patient-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${p.total_sessions || 0}</div>
+                                <div class="stat-label">Sessions</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${p.total_videos || 0}</div>
+                                <div class="stat-label">Videos</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${p.avg_form_score || 0}%</div>
+                                <div class="stat-label">Avg Form</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('patientGrid').innerHTML = patientHtml;
+        }
+
+        function openAddPatientModal() {
+            document.getElementById('addPatientModal').classList.add('active');
+            document.getElementById('addPatientForm').reset();
+            document.getElementById('password').value = 'Patient123!';
+            document.getElementById('addPatientAlert').innerHTML = '';
+        }
+
+        function closeAddPatientModal() {
+            document.getElementById('addPatientModal').classList.remove('active');
+        }
+
+        async function createPatient(event) {
+            event.preventDefault();
+
+            const patientData = {
+                full_name: document.getElementById('fullName').value,
+                date_of_birth: document.getElementById('dateOfBirth').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                primary_diagnosis: document.getElementById('diagnosis').value,
+                injury_date: document.getElementById('injuryDate').value,
+                treatment_goals: document.getElementById('treatmentGoals').value
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('addPatientAlert').innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Success!</strong> Patient created successfully.<br>
+                            <strong>Username:</strong> ${data.username}<br>
+                            <strong>Password:</strong> ${data.temporary_password}<br>
+                            <small>Share these credentials with the patient.</small>
+                        </div>
+                    `;
+                    
+                    // Reload patients after 2 seconds
+                    setTimeout(() => {
+                        closeAddPatientModal();
+                        loadPatients();
+                    }, 3000);
+                } else {
+                    document.getElementById('addPatientAlert').innerHTML = `
+                        <div class="alert alert-error">
+                            <strong>Error:</strong> ${data.error || 'Failed to create patient'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error creating patient:', error);
+                document.getElementById('addPatientAlert').innerHTML = `
+                    <div class="alert alert-error">
+                        <strong>Error:</strong> Failed to create patient. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        async function viewPatientDetails(patientId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load patient details');
+
+                const patient = await response.json();
+                displayPatientDetails(patient);
+                document.getElementById('patientDetailModal').classList.add('active');
+
+            } catch (error) {
+                console.error('Error loading patient details:', error);
+                alert('Failed to load patient details');
+            }
+        }
+
+        function displayPatientDetails(patient) {
+            document.getElementById('detailPatientName').textContent = patient.full_name || patient.username;
+
+            const detailHtml = `
+                <div class="detail-section">
+                    <h3>Patient Information</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div><strong>Email:</strong> ${patient.email}</div>
+                        <div><strong>Phone:</strong> ${patient.phone || 'Not provided'}</div>
+                        <div><strong>Date of Birth:</strong> ${patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not provided'}</div>
+                        <div><strong>Status:</strong> ${patient.current_status || 'Active'}</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Medical Information</h3>
+                    <p><strong>Diagnosis:</strong> ${patient.primary_diagnosis || 'Not specified'}</p>
+                    <p><strong>Injury Date:</strong> ${patient.injury_date ? new Date(patient.injury_date).toLocaleDateString() : 'Not specified'}</p>
+                    <p><strong>Treatment Start:</strong> ${patient.treatment_start_date ? new Date(patient.treatment_start_date).toLocaleDateString() : 'Not specified'}</p>
+                    <p><strong>Treatment Goals:</strong> ${patient.treatment_goals || 'Not specified'}</p>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Progress Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.workouts?.length || 0}</div>
+                            <div style="color: #666;">Total Workouts</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.videos?.length || 0}</div>
+                            <div style="color: #666;">Videos Uploaded</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.notes?.length || 0}</div>
+                            <div style="color: #666;">Therapist Notes</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${patient.workouts && patient.workouts.length > 0 ? `
+                    <div class="detail-section">
+                        <h3>Recent Workouts</h3>
+                        ${patient.workouts.slice(0, 5).map(w => `
+                            <div class="workout-item">
+                                <div class="workout-date">
+                                    ${new Date(w.date).toLocaleDateString()} - ${w.exercise_type}
+                                </div>
+                                <div class="workout-metrics">
+                                    <span>${w.sets} sets</span>
+                                    <span>${w.total_reps} reps</span>
+                                    <span>Form: ${w.form_score}%</span>
+                                    ${w.has_video ? '<span>📹 Video</span>' : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="addNoteForPatient(${patient.user_id})">
+                        ✍️ Add Treatment Note
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('patientDetailContent').innerHTML = detailHtml;
+        }
+
+        function closePatientDetailModal() {
+            document.getElementById('patientDetailModal').classList.remove('active');
+        }
+
+        function addNoteForPatient(patientUserId) {
+            // This would open a note-writing modal
+            alert(`Add note feature - patient ID: ${patientUserId}\n\nThis will be implemented with the note-writing functionality.`);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        // Load patients on page load
+        loadPatients();
+    </script>
+</body>
+</html>
