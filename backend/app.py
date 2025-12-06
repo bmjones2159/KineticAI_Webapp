@@ -472,6 +472,8 @@ def get_video(video_id):
 
 @app.route('/api/videos/<int:video_id>/download', methods=['GET'])
 @jwt_required()
+
+
 def download_video(video_id):
     """Download video file"""
     try:
@@ -506,6 +508,8 @@ def download_video(video_id):
 
 @app.route('/api/videos/<int:video_id>/analyze', methods=['POST'])
 @jwt_required()
+
+
 def analyze_video(video_id):
     """Analyze video with AI - detects exercise type and compares to demo"""
     try:
@@ -645,6 +649,516 @@ def analyze_video(video_id):
                  'VIDEO_ANALYSIS_FAILED', 'Video', video_id, details=error_details, success=False)
         return jsonify({'error': str(e), 'details': error_details}), 500
 
+"""
+COMPLETE PATIENT MANAGEMENT SYSTEM
+Add these to app.py:
+1. Database models (after existing models)
+2. API endpoints (before if __name__)
+"""
+
+# ============================================================================
+# DATABASE MODELS - Add after existing models (after ExerciseSession)
+# ============================================================================
+
+class PatientProfile(db.Model):
+    """Extended patient information"""
+    __tablename__ = 'patient_profiles'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    
+    # Personal Information
+    full_name = db.Column(db.String(200))
+    date_of_birth = db.Column(db.Date)
+    phone = db.Column(db.String(20))
+    
+    # Medical Information
+    primary_diagnosis = db.Column(db.String(500))
+    injury_date = db.Column(db.Date)
+    treatment_goals = db.Column(db.Text)
+    
+    # Assignment
+    assigned_therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    treatment_start_date = db.Column(db.Date, default=datetime.utcnow)
+    current_status = db.Column(db.String(50), default='active')
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', foreign_keys=[user_id], backref='patient_profile')
+    therapist = db.relationship('User', foreign_keys=[assigned_therapist_id], backref='assigned_patients')
+
+class WorkoutHistory(db.Model):
+    """Track patient workout sessions"""
+    __tablename__ = 'workout_history'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Workout Details
+    workout_date = db.Column(db.DateTime, default=datetime.utcnow)
+    exercise_type = db.Column(db.String(100))
+    sets_completed = db.Column(db.Integer, default=0)
+    reps_per_set = db.Column(db.String(100))  # e.g., "12,10,10"
+    total_reps = db.Column(db.Integer, default=0)
+    weight_used = db.Column(db.Float)  # in lbs or kg
+    
+    # Performance Metrics
+    avg_form_score = db.Column(db.Float)
+    duration_minutes = db.Column(db.Integer)
+    calories_burned = db.Column(db.Float)
+    
+    # Associated Video
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'))
+    
+    # Patient Notes
+    patient_notes = db.Column(db.Text)
+    pain_level = db.Column(db.Integer)  # 0-10 scale
+    difficulty_level = db.Column(db.Integer)  # 1-5 scale
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='workout_sessions')
+    video = db.relationship('Video', backref='workout')
+
+class TherapistNote(db.Model):
+    """Therapist notes and recommendations"""
+    __tablename__ = 'therapist_notes'
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    note_type = db.Column(db.String(50))  # assessment, progress, recommendation
+    title = db.Column(db.String(200))
+    content = db.Column(db.Text)
+    recommendations = db.Column(db.Text)
+    
+    # Related to specific video
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'))
+    
+    patient_viewed = db.Column(db.Boolean, default=False)
+    patient_viewed_at = db.Column(db.DateTime)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    patient = db.relationship('User', foreign_keys=[patient_id], backref='received_notes')
+    therapist = db.relationship('User', foreign_keys=[therapist_id], backref='written_notes')
+    video = db.relationship('Video', backref='therapist_notes')
+
+
+# ============================================================================
+# API ENDPOINTS - Add before if __name__ == '__main__'
+# ============================================================================
+
+# -------------------- PATIENT MANAGEMENT --------------------
+
+@app.route('/api/therapist/patients', methods=['POST'])
+@jwt_required()
+def create_patient():
+    """Therapist creates new patient"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can create patients'}), 403
+        
+        data = request.get_json()
+        
+        # Create user account
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password', 'Patient123!')
+        
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 400
+        
+        password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            role='user'
+        )
+        db.session.add(new_user)
+        db.session.flush()
+        
+        # Create patient profile
+        profile = PatientProfile(
+            user_id=new_user.id,
+            full_name=data.get('full_name'),
+            date_of_birth=datetime.strptime(data.get('date_of_birth'), '%Y-%m-%d').date() if data.get('date_of_birth') else None,
+            phone=data.get('phone'),
+            primary_diagnosis=data.get('primary_diagnosis'),
+            injury_date=datetime.strptime(data.get('injury_date'), '%Y-%m-%d').date() if data.get('injury_date') else None,
+            treatment_goals=data.get('treatment_goals'),
+            assigned_therapist_id=current_user_id,
+            current_status='active'
+        )
+        db.session.add(profile)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'PATIENT_CREATED', 'PatientProfile', profile.id)
+        
+        return jsonify({
+            'message': 'Patient created successfully',
+            'patient_id': profile.id,
+            'username': username,
+            'temporary_password': password
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/patients', methods=['GET'])
+@jwt_required()
+def get_therapist_patients():
+    """Get all patients for logged-in therapist"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Get patients
+        if user.role == 'admin':
+            profiles = PatientProfile.query.all()
+        else:
+            profiles = PatientProfile.query.filter_by(assigned_therapist_id=current_user_id).all()
+        
+        patient_list = []
+        for p in profiles:
+            # Get latest workout
+            latest_workout = WorkoutHistory.query.filter_by(user_id=p.user_id).order_by(
+                WorkoutHistory.workout_date.desc()
+            ).first()
+            
+            # Get total sessions
+            total_sessions = WorkoutHistory.query.filter_by(user_id=p.user_id).count()
+            
+            # Get average form score
+            workouts = WorkoutHistory.query.filter_by(user_id=p.user_id).all()
+            avg_form = sum(w.avg_form_score for w in workouts if w.avg_form_score) / len(workouts) if workouts else 0
+            
+            patient_list.append({
+                'id': p.id,
+                'user_id': p.user_id,
+                'username': p.user.username,
+                'full_name': p.full_name,
+                'primary_diagnosis': p.primary_diagnosis,
+                'treatment_start_date': p.treatment_start_date.isoformat() if p.treatment_start_date else None,
+                'current_status': p.current_status,
+                'last_session': latest_workout.workout_date.isoformat() if latest_workout else None,
+                'total_sessions': total_sessions,
+                'avg_form_score': round(avg_form, 1)
+            })
+        
+        return jsonify({'patients': patient_list}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/patients/<int:patient_id>', methods=['GET'])
+@jwt_required()
+def get_patient_details(patient_id):
+    """Get detailed patient information"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        profile = PatientProfile.query.get(patient_id)
+        if not profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Check access
+        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Get workout history
+        workouts = WorkoutHistory.query.filter_by(user_id=profile.user_id).order_by(
+            WorkoutHistory.workout_date.desc()
+        ).limit(20).all()
+        
+        # Get videos
+        videos = Video.query.filter_by(user_id=profile.user_id, is_deleted=False).order_by(
+            Video.uploaded_at.desc()
+        ).limit(10).all()
+        
+        # Get therapist notes
+        notes = TherapistNote.query.filter_by(patient_id=profile.user_id).order_by(
+            TherapistNote.created_at.desc()
+        ).all()
+        
+        return jsonify({
+            'id': profile.id,
+            'user_id': profile.user_id,
+            'username': profile.user.username,
+            'email': profile.user.email,
+            'full_name': profile.full_name,
+            'date_of_birth': profile.date_of_birth.isoformat() if profile.date_of_birth else None,
+            'phone': profile.phone,
+            'primary_diagnosis': profile.primary_diagnosis,
+            'injury_date': profile.injury_date.isoformat() if profile.injury_date else None,
+            'treatment_goals': profile.treatment_goals,
+            'current_status': profile.current_status,
+            'workouts': [{
+                'id': w.id,
+                'date': w.workout_date.isoformat(),
+                'exercise_type': w.exercise_type,
+                'sets': w.sets_completed,
+                'total_reps': w.total_reps,
+                'form_score': w.avg_form_score,
+                'duration': w.duration_minutes,
+                'has_video': w.video_id is not None
+            } for w in workouts],
+            'videos': [{
+                'id': v.id,
+                'filename': v.filename,
+                'uploaded_at': v.uploaded_at.isoformat(),
+                'has_analysis': v.analysis_results is not None
+            } for v in videos],
+            'notes': [{
+                'id': n.id,
+                'type': n.note_type,
+                'title': n.title,
+                'content': n.content,
+                'created_at': n.created_at.isoformat(),
+                'therapist': n.therapist.username
+            } for n in notes]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# -------------------- WORKOUT HISTORY --------------------
+
+@app.route('/api/workouts', methods=['POST'])
+@jwt_required()
+def log_workout():
+    """Patient logs a workout session"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json()
+        
+        workout = WorkoutHistory(
+            user_id=current_user_id,
+            exercise_type=data.get('exercise_type'),
+            sets_completed=data.get('sets_completed', 0),
+            reps_per_set=data.get('reps_per_set'),
+            total_reps=data.get('total_reps', 0),
+            weight_used=data.get('weight_used'),
+            avg_form_score=data.get('form_score'),
+            duration_minutes=data.get('duration_minutes'),
+            calories_burned=data.get('calories_burned'),
+            video_id=data.get('video_id'),
+            patient_notes=data.get('notes'),
+            pain_level=data.get('pain_level'),
+            difficulty_level=data.get('difficulty_level')
+        )
+        db.session.add(workout)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'WORKOUT_LOGGED', 'WorkoutHistory', workout.id)
+        
+        return jsonify({
+            'message': 'Workout logged successfully',
+            'workout_id': workout.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/workouts', methods=['GET'])
+@jwt_required()
+def get_workout_history():
+    """Get workout history for current user"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        workouts = WorkoutHistory.query.filter_by(user_id=current_user_id).order_by(
+            WorkoutHistory.workout_date.desc()
+        ).all()
+        
+        return jsonify({
+            'workouts': [{
+                'id': w.id,
+                'date': w.workout_date.isoformat(),
+                'exercise_type': w.exercise_type,
+                'sets_completed': w.sets_completed,
+                'reps_per_set': w.reps_per_set,
+                'total_reps': w.total_reps,
+                'weight_used': w.weight_used,
+                'form_score': w.avg_form_score,
+                'duration_minutes': w.duration_minutes,
+                'calories_burned': w.calories_burned,
+                'pain_level': w.pain_level,
+                'difficulty_level': w.difficulty_level,
+                'notes': w.patient_notes,
+                'has_video': w.video_id is not None
+            } for w in workouts]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/workouts/stats', methods=['GET'])
+@jwt_required()
+def get_workout_stats():
+    """Get workout statistics"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        workouts = WorkoutHistory.query.filter_by(user_id=current_user_id).all()
+        
+        if not workouts:
+            return jsonify({
+                'total_workouts': 0,
+                'total_reps': 0,
+                'avg_form_score': 0,
+                'total_calories': 0
+            }), 200
+        
+        stats = {
+            'total_workouts': len(workouts),
+            'total_reps': sum(w.total_reps for w in workouts),
+            'avg_form_score': round(sum(w.avg_form_score for w in workouts if w.avg_form_score) / len([w for w in workouts if w.avg_form_score]), 1) if any(w.avg_form_score for w in workouts) else 0,
+            'total_calories': sum(w.calories_burned for w in workouts if w.calories_burned),
+            'exercises_by_type': {}
+        }
+        
+        # Group by exercise type
+        for w in workouts:
+            if w.exercise_type:
+                if w.exercise_type not in stats['exercises_by_type']:
+                    stats['exercises_by_type'][w.exercise_type] = {
+                        'count': 0,
+                        'total_reps': 0,
+                        'avg_form': []
+                    }
+                stats['exercises_by_type'][w.exercise_type]['count'] += 1
+                stats['exercises_by_type'][w.exercise_type]['total_reps'] += w.total_reps
+                if w.avg_form_score:
+                    stats['exercises_by_type'][w.exercise_type]['avg_form'].append(w.avg_form_score)
+        
+        # Calculate averages
+        for ex_type in stats['exercises_by_type']:
+            if stats['exercises_by_type'][ex_type]['avg_form']:
+                avg = sum(stats['exercises_by_type'][ex_type]['avg_form']) / len(stats['exercises_by_type'][ex_type]['avg_form'])
+                stats['exercises_by_type'][ex_type]['avg_form'] = round(avg, 1)
+            else:
+                stats['exercises_by_type'][ex_type]['avg_form'] = 0
+        
+        return jsonify(stats), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# -------------------- THERAPIST NOTES --------------------
+
+@app.route('/api/therapist/notes', methods=['POST'])
+@jwt_required()
+def add_therapist_note():
+    """Therapist adds note for patient"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        data = request.get_json()
+        
+        note = TherapistNote(
+            patient_id=data.get('patient_id'),
+            therapist_id=current_user_id,
+            note_type=data.get('note_type', 'progress'),
+            title=data.get('title'),
+            content=data.get('content'),
+            recommendations=data.get('recommendations'),
+            video_id=data.get('video_id')
+        )
+        db.session.add(note)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'THERAPIST_NOTE_ADDED', 'TherapistNote', note.id)
+        
+        return jsonify({
+            'message': 'Note added successfully',
+            'note_id': note.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/patient/notes', methods=['GET'])
+@jwt_required()
+def get_patient_notes():
+    """Patient gets their therapist notes"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        notes = TherapistNote.query.filter_by(patient_id=current_user_id).order_by(
+            TherapistNote.created_at.desc()
+        ).all()
+        
+        # Mark as viewed
+        for note in notes:
+            if not note.patient_viewed:
+                note.patient_viewed = True
+                note.patient_viewed_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'notes': [{
+                'id': n.id,
+                'type': n.note_type,
+                'title': n.title,
+                'content': n.content,
+                'recommendations': n.recommendations,
+                'created_at': n.created_at.isoformat(),
+                'therapist_name': n.therapist.username,
+                'related_video_id': n.video_id
+            } for n in notes]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# -------------------- PATIENT INFO --------------------
+
+@app.route('/api/patient/profile', methods=['GET'])
+@jwt_required()
+def get_my_profile():
+    """Patient gets their own profile"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        profile = PatientProfile.query.filter_by(user_id=current_user_id).first()
+        
+        if not profile:
+            return jsonify({'message': 'No profile found'}), 200
+        
+        therapist_name = profile.therapist.username if profile.therapist else 'Not assigned'
+        
+        return jsonify({
+            'full_name': profile.full_name,
+            'primary_diagnosis': profile.primary_diagnosis,
+            'treatment_goals': profile.treatment_goals,
+            'therapist_name': therapist_name,
+            'treatment_start_date': profile.treatment_start_date.isoformat() if profile.treatment_start_date else None,
+            'current_status': profile.current_status
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/videos/<int:video_id>', methods=['DELETE'])
 @jwt_required()
