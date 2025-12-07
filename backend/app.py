@@ -1699,5 +1699,152 @@ with app.app_context():
         except Exception as e:
             print(f"Auto-init error (safe to ignore if already initialized): {e}")
 
+
+# ============================================================================
+# ADDITIONAL ENDPOINTS FOR PATIENT EDITING AND VIDEO STREAMING
+# ============================================================================
+
+@app.route('/api/therapist/patients/<int:patient_id>', methods=['PUT'])
+@jwt_required()
+def update_patient(patient_id):
+    """Therapist updates patient information"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        profile = PatientProfile.query.get(patient_id)
+        if not profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Check access
+        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        data = request.get_json()
+        
+        # Update fields
+        if 'full_name' in data:
+            profile.full_name = data['full_name']
+        if 'date_of_birth' in data and data['date_of_birth']:
+            profile.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+        if 'phone' in data:
+            profile.phone = data['phone']
+        if 'primary_diagnosis' in data:
+            profile.primary_diagnosis = data['primary_diagnosis']
+        if 'injury_date' in data and data['injury_date']:
+            profile.injury_date = datetime.strptime(data['injury_date'], '%Y-%m-%d').date()
+        if 'treatment_goals' in data:
+            profile.treatment_goals = data['treatment_goals']
+        if 'current_status' in data:
+            profile.current_status = data['current_status']
+        
+        # Update email if provided
+        if 'email' in data:
+            profile.user.email = data['email']
+        
+        profile.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        log_audit(current_user_id, 'PATIENT_UPDATED', 'PatientProfile', patient_id)
+        
+        return jsonify({
+            'message': 'Patient updated successfully',
+            'patient_id': patient_id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/videos/<int:video_id>/stream', methods=['GET'])
+@jwt_required()
+def stream_video(video_id):
+    """Stream video for in-browser playback"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        video = Video.query.get(video_id)
+        if not video or video.is_deleted:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check access - patient can view own videos, therapist can view assigned patients
+        if user.role == 'user' and video.user_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        if user.role == 'clinician':
+            patient_profile = PatientProfile.query.filter_by(user_id=video.user_id).first()
+            if patient_profile and patient_profile.assigned_therapist_id != current_user_id:
+                return jsonify({'error': 'Access denied'}), 403
+        
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], video.encrypted_filename)
+        
+        if not os.path.exists(video_path):
+            return jsonify({'error': 'Video file not found'}), 404
+        
+        log_audit(current_user_id, 'VIDEO_STREAMED', 'Video', video_id)
+        
+        # Stream video
+        return send_file(
+            video_path,
+            mimetype=video.mime_type or 'video/mp4',
+            as_attachment=False
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/patients/<int:patient_id>/videos', methods=['GET'])
+@jwt_required()
+def get_patient_videos_with_analysis(patient_id):
+    """Get all videos for a patient with full analysis results"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        profile = PatientProfile.query.get(patient_id)
+        if not profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Check access
+        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Get all videos for this patient
+        videos = Video.query.filter_by(user_id=profile.user_id, is_deleted=False).order_by(
+            Video.uploaded_at.desc()
+        ).all()
+        
+        video_list = []
+        for v in videos:
+            # Decrypt analysis results
+            analysis = None
+            if v.analysis_results:
+                try:
+                    decrypted_data = decrypt_data(v.analysis_results)
+                    analysis = json.loads(decrypted_data) if isinstance(decrypted_data, str) else decrypted_data
+                except Exception as e:
+                    app.logger.error(f"Failed to decrypt analysis: {e}")
+            
+            video_list.append({
+                'id': v.id,
+                'filename': v.filename,
+                'uploaded_at': v.uploaded_at.isoformat(),
+                'file_size': v.file_size,
+                'has_analysis': v.analysis_results is not None,
+                'analysis_results': analysis
+            })
+        
+        return jsonify({'videos': video_list}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
