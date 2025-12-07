@@ -485,6 +485,161 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Workout Progress Tracking Styles */
+        .progress-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .progress-card {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .progress-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .progress-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        .exercise-breakdown {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .exercise-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .exercise-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .exercise-count {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .weekly-chart {
+            display: flex;
+            gap: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            align-items: flex-end;
+            min-height: 200px;
+        }
+
+        .week-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .bar-fill {
+            width: 100%;
+            background: #10b981;
+            border-radius: 5px 5px 0 0;
+            position: relative;
+            min-height: 30px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 5px;
+            transition: all 0.3s;
+        }
+
+        .bar-fill:hover {
+            opacity: 0.8;
+        }
+
+        .bar-label {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .bar-week {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .bar-score {
+            font-size: 0.85em;
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .workouts-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .workouts-table thead {
+            background: #f8f9fa;
+        }
+
+        .workouts-table th,
+        .workouts-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .workouts-table th {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .workouts-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .score-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .score-badge.good {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .score-badge.fair {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .score-badge.poor {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -775,6 +930,17 @@
                         <div><strong>Status:</strong> ${patient.current_status || 'Active'}</div>
                     </div>
                 </div>
+
+                <!-- Workout Progress Section -->
+                <div class="patient-info-section">
+                    <h3>📊 Workout Progress & Compliance</h3>
+                    <div id="progressContainer_${patient.user_id}">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Loading progress data...</p>
+                        </div>
+                    </div>
+                </div>
             `;
 
             // Display each video with full review interface
@@ -807,6 +973,9 @@
             }
 
             document.getElementById('patientReviewContent').innerHTML = contentHtml;
+            
+            // Load workout progress data
+            loadPatientProgress(patient.user_id);
         }
 
         function generateReviewSection(video, token, index) {
@@ -824,7 +993,7 @@
                     <div class="ai-results-grid">
                         <div class="ai-stat-box">
                             <div class="ai-stat-value">${analysis.total_reps || 0}</div>
-                            <div class="ai-stat-label">Reps Detected</div>
+                            <div class="ai-stat-label">Reps Detected (AI)</div>
                         </div>
                         <div class="ai-stat-box">
                             <div class="ai-stat-value">${Math.round(analysis.average_accuracy || analysis.form_score || 0)}%</div>
@@ -835,6 +1004,43 @@
                             <div class="ai-stat-label">Exercise Type</div>
                         </div>
                     </div>
+
+                    <!-- Patient Workout Details -->
+                    ${video.workout_details ? `
+                        <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #4caf50;">
+                            <h4 style="color: #2e7d32; margin-bottom: 15px;">📊 Patient Logged Details:</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                ${video.workout_details.sets ? `
+                                    <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.8em; font-weight: bold; color: #4caf50;">${video.workout_details.sets}</div>
+                                        <div style="color: #666; font-size: 0.9em;">Sets</div>
+                                    </div>
+                                ` : ''}
+                                ${video.workout_details.reps ? `
+                                    <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.8em; font-weight: bold; color: #4caf50;">${video.workout_details.reps}</div>
+                                        <div style="color: #666; font-size: 0.9em;">Reps</div>
+                                    </div>
+                                ` : ''}
+                                ${video.workout_details.weight ? `
+                                    <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
+                                        <div style="font-size: 1.8em; font-weight: bold; color: #4caf50;">${video.workout_details.weight} lbs</div>
+                                        <div style="color: #666; font-size: 0.9em;">Weight</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            ${video.workout_details.notes ? `
+                                <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px;">
+                                    <strong style="color: #2e7d32;">Patient Notes:</strong>
+                                    <p style="margin: 5px 0 0 0; color: #666;">${video.workout_details.notes}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : `
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center; color: #856404;">
+                            ℹ️ Patient has not logged workout details yet (sets, reps, weight)
+                        </div>
+                    `}
 
                     <!-- Video Player -->
                     <div class="video-player-container">
@@ -957,6 +1163,137 @@
         function closePatientReviewModal() {
             document.getElementById('patientReviewModal').classList.remove('active');
             currentPatient = null;
+        }
+
+        async function loadPatientProgress(patientId) {
+            try {
+                const token = localStorage.getItem('token');
+                
+                // Load workout history
+                const workoutsResponse = await fetch(`${API_URL}/api/therapist/patients/${patientId}/workouts?limit=30`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!workoutsResponse.ok) throw new Error('Failed to load workouts');
+                const workoutsData = await workoutsResponse.json();
+                
+                // Load progress metrics
+                const progressResponse = await fetch(`${API_URL}/api/therapist/patients/${patientId}/progress`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!progressResponse.ok) throw new Error('Failed to load progress');
+                const progressData = await progressResponse.json();
+                
+                displayProgressData(patientId, workoutsData, progressData);
+                
+            } catch (error) {
+                console.error('Error loading progress:', error);
+                document.getElementById(`progressContainer_${patientId}`).innerHTML = 
+                    '<p style="color: #dc3545; padding: 20px;">Failed to load progress data</p>';
+            }
+        }
+
+        function displayProgressData(patientId, workouts, progress) {
+            const container = document.getElementById(`progressContainer_${patientId}`);
+            
+            if (!container) {
+                console.error('Progress container not found');
+                return;
+            }
+            
+            const html = `
+                <!-- Summary Cards -->
+                <div class="progress-summary">
+                    <div class="progress-card">
+                        <div class="progress-value">${workouts.summary.total_workouts || 0}</div>
+                        <div class="progress-label">Total Workouts (30 days)</div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="progress-value">${workouts.summary.avg_form_score || 0}%</div>
+                        <div class="progress-label">Avg Form Score</div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="progress-value">${progress.current_streak || 0}</div>
+                        <div class="progress-label">Day Streak</div>
+                    </div>
+                    <div class="progress-card">
+                        <div class="progress-value">${workouts.summary.last_workout ? new Date(workouts.summary.last_workout).toLocaleDateString() : 'Never'}</div>
+                        <div class="progress-label">Last Workout</div>
+                    </div>
+                </div>
+                
+                <!-- Exercise Breakdown -->
+                ${Object.keys(workouts.summary.exercise_breakdown || {}).length > 0 ? `
+                    <div style="margin-top: 20px;">
+                        <h4 style="color: #10b981; margin-bottom: 10px;">Exercise Breakdown</h4>
+                        <div class="exercise-breakdown">
+                            ${Object.entries(workouts.summary.exercise_breakdown).map(([exercise, count]) => `
+                                <div class="exercise-stat">
+                                    <span class="exercise-name">${exercise.toUpperCase()}</span>
+                                    <span class="exercise-count">${count} sessions</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Weekly Progress Chart -->
+                ${progress.progress && progress.progress.length > 0 ? `
+                    <div style="margin-top: 25px;">
+                        <h4 style="color: #10b981; margin-bottom: 15px;">Weekly Progress Trend</h4>
+                        <div class="weekly-chart">
+                            ${progress.progress.map(week => `
+                                <div class="week-bar">
+                                    <div class="bar-fill" style="height: ${Math.min(week.workouts_completed * 20, 100)}%; background: ${week.avg_form_score >= 80 ? '#10b981' : week.avg_form_score >= 60 ? '#ffc107' : '#dc3545'}">
+                                        <span class="bar-label">${week.workouts_completed}</span>
+                                    </div>
+                                    <div class="bar-week">${week.week_start}</div>
+                                    <div class="bar-score">${week.avg_form_score}%</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Recent Workouts Table -->
+                ${workouts.workouts && workouts.workouts.length > 0 ? `
+                    <div style="margin-top: 25px;">
+                        <h4 style="color: #10b981; margin-bottom: 15px;">Recent Workouts</h4>
+                        <table class="workouts-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Exercise</th>
+                                    <th>Reps × Sets</th>
+                                    <th>Form Score</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${workouts.workouts.slice(0, 10).map(w => `
+                                    <tr>
+                                        <td>${new Date(w.completed_at).toLocaleDateString()}</td>
+                                        <td>${w.exercise_type.toUpperCase()}</td>
+                                        <td>${w.reps_completed} × ${w.sets_completed}</td>
+                                        <td><span class="score-badge ${w.form_score >= 80 ? 'good' : w.form_score >= 60 ? 'fair' : 'poor'}">${w.form_score || '-'}%</span></td>
+                                        <td>${formatWorkoutDuration(w.duration_seconds)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<p style="color: #666; text-align: center; padding: 20px;">No workouts completed yet</p>'}
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        function formatWorkoutDuration(seconds) {
+            if (!seconds) return '-';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${String(secs).padStart(2, '0')}`;
         }
 
         function logout() {
