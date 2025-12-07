@@ -875,8 +875,8 @@ def get_patient_details(patient_id):
         workouts = WorkoutHistory.query.filter_by(user_id=profile.user_id).order_by(
             WorkoutHistory.workout_date.desc()
         ).limit(20).all()
-        
-        # Get videos WITH ANALYSIS
+
+                # Get videos WITH ANALYSIS
         videos = Video.query.filter_by(user_id=profile.user_id, is_deleted=False).order_by(
             Video.uploaded_at.desc()
         ).limit(10).all()
@@ -905,6 +905,9 @@ def get_patient_details(patient_id):
                     app.logger.error(f"Failed to decrypt analysis for video {v.id}: {e}")
             
             video_list.append(video_data)
+           
+            
+              
         
         # Get therapist notes
         notes = TherapistNote.query.filter_by(patient_id=profile.user_id).order_by(
@@ -1786,7 +1789,7 @@ def stream_video(video_id):
         if not video or video.is_deleted:
             return jsonify({'error': 'Video not found'}), 404
         
-        # Check access - patient can view own videos, therapist can view assigned patients
+        # Check access - patient can view own, therapist can view assigned patients
         if user.role == 'user' and video.user_id != current_user_id:
             return jsonify({'error': 'Access denied'}), 403
         
@@ -1802,7 +1805,6 @@ def stream_video(video_id):
         
         log_audit(current_user_id, 'VIDEO_STREAMED', 'Video', video_id)
         
-        # Stream video
         return send_file(
             video_path,
             mimetype=video.mime_type or 'video/mp4',
