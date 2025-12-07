@@ -1912,6 +1912,9 @@ This system tracks:
 4. Progress metrics calculated automatically
 """
 
+# COPY THIS TO REPLACE THE END OF YOUR app.py FILE
+# Starting from the workout tracking endpoints
+
 # ============================================================================
 # WORKOUT COMPLETION - PATIENT SIDE
 # ============================================================================
@@ -1954,12 +1957,12 @@ def complete_workout():
             user_id=current_user_id,
             video_id=video_id,
             exercise_type=exercise_type,
-            reps_completed=reps_completed,
+            total_reps=reps_completed * sets_completed,
             sets_completed=sets_completed,
-            duration_seconds=data.get('duration_seconds'),
-            form_score=form_score,
-            notes=data.get('notes'),
-            completed_at=datetime.utcnow()
+            reps_per_set=str(reps_completed),
+            duration_minutes=int(data.get('duration_seconds', 0) / 60) if data.get('duration_seconds') else None,
+            avg_form_score=form_score,
+            patient_notes=data.get('notes')
         )
         
         db.session.add(workout)
@@ -1971,7 +1974,6 @@ def complete_workout():
         return jsonify({
             'message': 'Workout completed successfully',
             'workout_id': workout.id,
-            'completed_at': workout.completed_at.isoformat(),
             'form_score': form_score
         }), 201
         
@@ -1997,26 +1999,26 @@ def get_my_workout_history():
         if exercise_type:
             query = query.filter_by(exercise_type=exercise_type)
         
-        workouts = query.order_by(WorkoutHistory.completed_at.desc()).limit(limit).all()
+        workouts = query.order_by(WorkoutHistory.workout_date.desc()).limit(limit).all()
         
         workout_list = []
         for w in workouts:
             workout_list.append({
                 'id': w.id,
                 'exercise_type': w.exercise_type,
-                'reps_completed': w.reps_completed,
+                'total_reps': w.total_reps,
                 'sets_completed': w.sets_completed,
-                'duration_seconds': w.duration_seconds,
-                'form_score': w.form_score,
-                'notes': w.notes,
-                'completed_at': w.completed_at.isoformat(),
+                'duration_minutes': w.duration_minutes,
+                'form_score': w.avg_form_score,
+                'notes': w.patient_notes,
+                'date': w.workout_date.isoformat(),
                 'video_id': w.video_id
             })
         
         # Calculate summary stats
         total_workouts = len(workout_list)
-        avg_form_score = sum(w['form_score'] for w in workout_list if w['form_score']) / max(total_workouts, 1)
-        total_reps = sum(w['reps_completed'] * w['sets_completed'] for w in workout_list)
+        avg_form_score = sum(w['form_score'] for w in workout_list if w['form_score']) / max(total_workouts, 1) if total_workouts > 0 else 0
+        total_reps = sum(w['total_reps'] for w in workout_list if w['total_reps'])
         
         return jsonify({
             'workouts': workout_list,
@@ -2043,25 +2045,25 @@ def get_workout_progress():
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
         workouts = WorkoutHistory.query.filter(
             WorkoutHistory.user_id == current_user_id,
-            WorkoutHistory.completed_at >= thirty_days_ago
-        ).order_by(WorkoutHistory.completed_at.asc()).all()
+            WorkoutHistory.workout_date >= thirty_days_ago
+        ).order_by(WorkoutHistory.workout_date.asc()).all()
         
         # Group by week
         weekly_data = {}
         for workout in workouts:
-            week_key = workout.completed_at.strftime('%Y-W%U')
+            week_key = workout.workout_date.strftime('%Y-W%U')
             if week_key not in weekly_data:
                 weekly_data[week_key] = {
                     'workouts': 0,
                     'total_reps': 0,
                     'avg_form_score': [],
-                    'week_start': workout.completed_at.strftime('%Y-%m-%d')
+                    'week_start': workout.workout_date.strftime('%Y-%m-%d')
                 }
             
             weekly_data[week_key]['workouts'] += 1
-            weekly_data[week_key]['total_reps'] += workout.reps_completed * workout.sets_completed
-            if workout.form_score:
-                weekly_data[week_key]['avg_form_score'].append(workout.form_score)
+            weekly_data[week_key]['total_reps'] += workout.total_reps or 0
+            if workout.avg_form_score:
+                weekly_data[week_key]['avg_form_score'].append(workout.avg_form_score)
         
         # Calculate averages
         progress_data = []
@@ -2092,13 +2094,13 @@ def calculate_workout_streak(workouts):
         return 0
     
     # Sort by date descending
-    sorted_workouts = sorted(workouts, key=lambda w: w.completed_at, reverse=True)
+    sorted_workouts = sorted(workouts, key=lambda w: w.workout_date, reverse=True)
     
     streak = 0
     current_date = datetime.utcnow().date()
     
     for workout in sorted_workouts:
-        workout_date = workout.completed_at.date()
+        workout_date = workout.workout_date.date()
         days_diff = (current_date - workout_date).days
         
         if days_diff == streak:
@@ -2137,7 +2139,7 @@ def get_patient_workouts(patient_id):
         workouts = WorkoutHistory.query.filter_by(
             user_id=patient_id
         ).order_by(
-            WorkoutHistory.completed_at.desc()
+            WorkoutHistory.workout_date.desc()
         ).limit(limit).all()
         
         workout_list = []
@@ -2145,12 +2147,12 @@ def get_patient_workouts(patient_id):
             workout_list.append({
                 'id': w.id,
                 'exercise_type': w.exercise_type,
-                'reps_completed': w.reps_completed,
+                'total_reps': w.total_reps,
                 'sets_completed': w.sets_completed,
-                'duration_seconds': w.duration_seconds,
-                'form_score': w.form_score,
-                'notes': w.notes,
-                'completed_at': w.completed_at.isoformat(),
+                'duration_minutes': w.duration_minutes,
+                'form_score': w.avg_form_score,
+                'notes': w.patient_notes,
+                'completed_at': w.workout_date.isoformat(),
                 'video_id': w.video_id
             })
         
@@ -2164,7 +2166,8 @@ def get_patient_workouts(patient_id):
         # Get exercise type breakdown
         exercise_counts = {}
         for w in workout_list:
-            exercise_counts[w['exercise_type']] = exercise_counts.get(w['exercise_type'], 0) + 1
+            if w['exercise_type']:
+                exercise_counts[w['exercise_type']] = exercise_counts.get(w['exercise_type'], 0) + 1
         
         return jsonify({
             'workouts': workout_list,
@@ -2204,27 +2207,28 @@ def get_patient_progress(patient_id):
         ninety_days_ago = datetime.utcnow() - timedelta(days=90)
         workouts = WorkoutHistory.query.filter(
             WorkoutHistory.user_id == patient_id,
-            WorkoutHistory.completed_at >= ninety_days_ago
-        ).order_by(WorkoutHistory.completed_at.asc()).all()
+            WorkoutHistory.workout_date >= ninety_days_ago
+        ).order_by(WorkoutHistory.workout_date.asc()).all()
         
         # Group by week
         weekly_progress = {}
         for workout in workouts:
-            week_key = workout.completed_at.strftime('%Y-W%U')
+            week_key = workout.workout_date.strftime('%Y-W%U')
             if week_key not in weekly_progress:
                 weekly_progress[week_key] = {
                     'workouts': 0,
                     'exercises': {},
                     'avg_form_scores': [],
-                    'week_start': workout.completed_at.strftime('%m/%d/%Y')
+                    'week_start': workout.workout_date.strftime('%m/%d/%Y')
                 }
             
             weekly_progress[week_key]['workouts'] += 1
-            weekly_progress[week_key]['exercises'][workout.exercise_type] = \
-                weekly_progress[week_key]['exercises'].get(workout.exercise_type, 0) + 1
+            if workout.exercise_type:
+                weekly_progress[week_key]['exercises'][workout.exercise_type] = \
+                    weekly_progress[week_key]['exercises'].get(workout.exercise_type, 0) + 1
             
-            if workout.form_score:
-                weekly_progress[week_key]['avg_form_scores'].append(workout.form_score)
+            if workout.avg_form_score:
+                weekly_progress[week_key]['avg_form_scores'].append(workout.avg_form_score)
         
         # Format for response
         progress_data = []
@@ -2247,6 +2251,7 @@ def get_patient_progress(patient_id):
     except Exception as e:
         app.logger.error(f"Error getting patient progress: {e}")
         return jsonify({'error': str(e)}), 500
+
  
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
