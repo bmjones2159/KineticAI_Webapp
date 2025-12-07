@@ -272,8 +272,8 @@
                     return;
                 }
 
-                // Fetch video data with analysis
-                const response = await fetch(`${API_URL}/api/videos/${videoId}`, {
+                // Fetch video data with analysis (use /details endpoint for therapist access)
+                const response = await fetch(`${API_URL}/api/videos/${videoId}/details`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
