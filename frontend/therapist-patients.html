@@ -354,6 +354,24 @@
             color: #666;
         }
 
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
         @media (max-width: 768px) {
             .patient-grid {
                 grid-template-columns: 1fr;
@@ -467,9 +485,76 @@
         </div>
     </div>
 
+    <!-- Edit Patient Modal -->
+    <div id="editPatientModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Patient Information</h2>
+                <button class="close-btn" onclick="closeEditPatientModal()">×</button>
+            </div>
+
+            <div id="editPatientAlert"></div>
+
+            <form id="editPatientForm" onsubmit="updatePatient(event)">
+                <input type="hidden" id="editPatientId">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="editFullName">
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="editDateOfBirth">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="editEmail">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="editPhone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Primary Diagnosis</label>
+                    <input type="text" id="editDiagnosis">
+                </div>
+
+                <div class="form-group">
+                    <label>Injury Date</label>
+                    <input type="date" id="editInjuryDate">
+                </div>
+
+                <div class="form-group">
+                    <label>Treatment Goals</label>
+                    <textarea id="editTreatmentGoals"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus">
+                        <option value="active">Active</option>
+                        <option value="on_hold">On Hold</option>
+                        <option value="discharged">Discharged</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditPatientModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Patient Detail Modal -->
     <div id="patientDetailModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
                 <h2 id="detailPatientName">Patient Details</h2>
                 <button class="close-btn" onclick="closePatientDetailModal()">×</button>
@@ -607,7 +692,6 @@
                         </div>
                     `;
                     
-                    // Reload patients after 2 seconds
                     setTimeout(() => {
                         closeAddPatientModal();
                         loadPatients();
@@ -624,6 +708,81 @@
                 document.getElementById('addPatientAlert').innerHTML = `
                     <div class="alert alert-error">
                         <strong>Error:</strong> Failed to create patient. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function openEditPatientModal(patient) {
+            document.getElementById('editPatientId').value = patient.id;
+            document.getElementById('editFullName').value = patient.full_name || '';
+            document.getElementById('editDateOfBirth').value = patient.date_of_birth || '';
+            document.getElementById('editEmail').value = patient.email || '';
+            document.getElementById('editPhone').value = patient.phone || '';
+            document.getElementById('editDiagnosis').value = patient.primary_diagnosis || '';
+            document.getElementById('editInjuryDate').value = patient.injury_date || '';
+            document.getElementById('editTreatmentGoals').value = patient.treatment_goals || '';
+            document.getElementById('editStatus').value = patient.current_status || 'active';
+            
+            document.getElementById('editPatientModal').classList.add('active');
+            document.getElementById('editPatientAlert').innerHTML = '';
+        }
+
+        function closeEditPatientModal() {
+            document.getElementById('editPatientModal').classList.remove('active');
+        }
+
+        async function updatePatient(event) {
+            event.preventDefault();
+
+            const patientId = document.getElementById('editPatientId').value;
+            const patientData = {
+                full_name: document.getElementById('editFullName').value,
+                date_of_birth: document.getElementById('editDateOfBirth').value,
+                email: document.getElementById('editEmail').value,
+                phone: document.getElementById('editPhone').value,
+                primary_diagnosis: document.getElementById('editDiagnosis').value,
+                injury_date: document.getElementById('editInjuryDate').value,
+                treatment_goals: document.getElementById('editTreatmentGoals').value,
+                current_status: document.getElementById('editStatus').value
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(patientData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('editPatientAlert').innerHTML = `
+                        <div class="alert alert-success">
+                            Patient information updated successfully!
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        closeEditPatientModal();
+                        loadPatients();
+                    }, 1500);
+                } else {
+                    document.getElementById('editPatientAlert').innerHTML = `
+                        <div class="alert alert-error">
+                            ${data.error || 'Failed to update patient'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error updating patient:', error);
+                document.getElementById('editPatientAlert').innerHTML = `
+                    <div class="alert alert-error">
+                        Failed to update patient. Please try again.
                     </div>
                 `;
             }
@@ -666,27 +825,107 @@
                     <h3>Medical Information</h3>
                     <p><strong>Diagnosis:</strong> ${patient.primary_diagnosis || 'Not specified'}</p>
                     <p><strong>Injury Date:</strong> ${patient.injury_date ? new Date(patient.injury_date).toLocaleDateString() : 'Not specified'}</p>
-                    <p><strong>Treatment Start:</strong> ${patient.treatment_start_date ? new Date(patient.treatment_start_date).toLocaleDateString() : 'Not specified'}</p>
                     <p><strong>Treatment Goals:</strong> ${patient.treatment_goals || 'Not specified'}</p>
                 </div>
 
-                <div class="detail-section">
-                    <h3>Progress Summary</h3>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
-                        <div>
-                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.workouts?.length || 0}</div>
-                            <div style="color: #666;">Total Workouts</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.videos?.length || 0}</div>
-                            <div style="color: #666;">Videos Uploaded</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.notes?.length || 0}</div>
-                            <div style="color: #666;">Therapist Notes</div>
+                ${patient.videos && patient.videos.length > 0 ? `
+                    <div class="detail-section">
+                        <h3>📹 Uploaded Videos & AI Analysis</h3>
+                        ${patient.videos.map(v => {
+                            const analysis = v.analysis_results;
+                            return `
+                                <div class="workout-item" style="margin-bottom: 20px; border-left: 4px solid #10b981;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                        <div>
+                                            <div style="font-weight: bold; font-size: 1.1em; color: #333;">
+                                                📹 ${v.filename}
+                                            </div>
+                                            <div style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                                                Uploaded: ${new Date(v.uploaded_at).toLocaleString()}
+                                            </div>
+                                            <div style="color: #666; font-size: 0.85em;">
+                                                Size: ${(v.file_size / 1024 / 1024).toFixed(2)} MB
+                                            </div>
+                                        </div>
+                                        ${analysis ? 
+                                            '<span class="badge badge-success">✓ Analyzed</span>' : 
+                                            '<span class="badge badge-warning">⏳ Pending</span>'
+                                        }
+                                    </div>
+                                    
+                                    ${analysis ? `
+                                        <div style="background: white; padding: 20px; border-radius: 10px; margin-top: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 15px;">
+                                                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                                    <div style="font-size: 1.8em; font-weight: bold; color: #10b981; text-transform: capitalize;">
+                                                        ${analysis.exercise_type || 'Unknown'}
+                                                    </div>
+                                                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Exercise Type</div>
+                                                </div>
+                                                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                                    <div style="font-size: 1.8em; font-weight: bold; color: #10b981;">
+                                                        ${analysis.total_reps || 0}
+                                                    </div>
+                                                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Reps Detected</div>
+                                                </div>
+                                                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                                    <div style="font-size: 1.8em; font-weight: bold; color: #10b981;">
+                                                        ${Math.round(analysis.average_accuracy || analysis.form_score || 0)}%
+                                                    </div>
+                                                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Form Score</div>
+                                                </div>
+                                                <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                                    <div style="font-size: 1.8em; font-weight: bold; color: #10b981;">
+                                                        ${analysis.total_frames || 0}
+                                                    </div>
+                                                    <div style="font-size: 0.85em; color: #666; margin-top: 5px;">Frames Analyzed</div>
+                                                </div>
+                                            </div>
+                                            
+                                            ${analysis.most_common_issues && analysis.most_common_issues.length > 0 ? `
+                                                <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                                    <strong style="color: #856404; display: block; margin-bottom: 8px;">⚠️ Form Issues Detected:</strong>
+                                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                                        ${analysis.most_common_issues.map(issue => 
+                                                            `<span style="display: inline-block; padding: 5px 12px; background: white; border-radius: 5px; font-size: 0.9em; color: #856404; border: 1px solid #ffeaa7;">${issue}</span>`
+                                                        ).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    ` : `
+                                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; text-align: center; color: #666;">
+                                            <p>This video has not been analyzed yet.</p>
+                                            <p style="font-size: 0.9em; margin-top: 5px;">Patient needs to run analysis first.</p>
+                                        </div>
+                                    `}
+                                    
+                                    <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                        ${analysis ? `
+                                            <button class="btn btn-primary" onclick="viewVideoAnalysis(${v.id})" style="font-size: 0.95em; padding: 10px 20px;">
+                                                📊 View Full Analysis Report
+                                            </button>
+                                        ` : ''}
+                                        <button class="btn btn-outline" onclick="playVideo(${v.id})" style="font-size: 0.95em; padding: 10px 20px;">
+                                            ▶️ Play Video
+                                        </button>
+                                        <button class="btn btn-secondary" onclick="addNoteForVideo(${patient.user_id}, ${v.id})" style="font-size: 0.95em; padding: 10px 20px;">
+                                            ✍️ Add Feedback
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="detail-section">
+                        <h3>📹 Uploaded Videos</h3>
+                        <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px; color: #666;">
+                            <p style="font-size: 1.1em;">No videos uploaded yet</p>
+                            <p style="font-size: 0.9em; margin-top: 10px;">Patient hasn't uploaded any exercise videos</p>
                         </div>
                     </div>
-                </div>
+                `}
 
                 ${patient.workouts && patient.workouts.length > 0 ? `
                     <div class="detail-section">
@@ -707,9 +946,27 @@
                     </div>
                 ` : ''}
 
-                <div style="margin-top: 20px;">
-                    <button class="btn btn-primary" onclick="addNoteForPatient(${patient.user_id})">
-                        ✍️ Add Treatment Note
+                <div class="detail-section">
+                    <h3>Progress Summary</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center;">
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.workouts?.length || 0}</div>
+                            <div style="color: #666;">Total Workouts</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.videos?.length || 0}</div>
+                            <div style="color: #666;">Videos Uploaded</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 2em; font-weight: bold; color: #10b981;">${patient.notes?.length || 0}</div>
+                            <div style="color: #666;">Therapist Notes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick='openEditPatientModal(${JSON.stringify(patient).replace(/'/g, "\\'")})'> 
+                        ✏️ Edit Patient Information
                     </button>
                 </div>
             `;
@@ -721,9 +978,56 @@
             document.getElementById('patientDetailModal').classList.remove('active');
         }
 
-        function addNoteForPatient(patientUserId) {
-            // This would open a note-writing modal
-            alert(`Add note feature - patient ID: ${patientUserId}\n\nThis will be implemented with the note-writing functionality.`);
+        function viewVideoAnalysis(videoId) {
+            window.open(`analysis-report.html?video_id=${videoId}`, '_blank');
+        }
+
+        function playVideo(videoId) {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 900px;">
+                    <div class="modal-header">
+                        <h2>Patient Exercise Video</h2>
+                        <button class="close-btn" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <video controls style="width: 100%; border-radius: 10px; background: black;" autoplay>
+                        <source src="${API_URL}/api/videos/${videoId}/stream" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
+                    <p style="margin-top: 15px; color: #666; font-size: 0.9em;">
+                        Use the controls to play, pause, or adjust volume. Click the X to close.
+                    </p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function addNoteForVideo(patientUserId, videoId) {
+            const note = prompt("Enter feedback for this video:");
+            if (note) {
+                const token = localStorage.getItem('token');
+                fetch(`${API_URL}/api/therapist/notes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        patient_id: patientUserId,
+                        video_id: videoId,
+                        note_type: 'video_feedback',
+                        title: 'Video Feedback',
+                        content: note
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        alert('Feedback added successfully!');
+                    } else {
+                        alert('Failed to add feedback');
+                    }
+                });
+            }
         }
 
         function logout() {
