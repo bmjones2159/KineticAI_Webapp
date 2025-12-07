@@ -1901,6 +1901,356 @@ def get_video_details_for_therapist(video_id):
             'analysis_results': analysis_results,
             'has_analysis': analysis_results is not None
         }), 200
+
+
+    """
+WORKOUT TRACKING SYSTEM - BACKEND ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ADD THESE ENDPOINTS TO app.py
+
+This system tracks:
+1. Patient logs completed workouts
+2. Each workout linked to video analysis
+3. Therapist sees workout history and progress
+4. Progress metrics calculated automatically
+"""
+
+# ============================================================================
+# WORKOUT COMPLETION - PATIENT SIDE
+# ============================================================================
+
+@app.route('/api/workouts/complete', methods=['POST'])
+@jwt_required()
+def complete_workout():
+    """Patient marks a workout as complete"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        data = request.get_json()
+        
+        # Required fields
+        video_id = data.get('video_id')
+        exercise_type = data.get('exercise_type')
+        reps_completed = data.get('reps_completed')
+        sets_completed = data.get('sets_completed', 1)
+        
+        if not all([video_id, exercise_type, reps_completed]):
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Verify video belongs to user
+        video = Video.query.get(video_id)
+        if not video or video.user_id != current_user_id:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Get analysis results for the video
+        analysis_results = None
+        form_score = None
+        if video.analysis_results:
+            try:
+                decrypted = decrypt_data(video.analysis_results)
+                analysis_results = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
+                form_score = analysis_results.get('average_accuracy') or analysis_results.get('form_score')
+            except:
+                pass
+        
+        # Create workout record
+        workout = WorkoutHistory(
+            user_id=current_user_id,
+            video_id=video_id,
+            exercise_type=exercise_type,
+            reps_completed=reps_completed,
+            sets_completed=sets_completed,
+            duration_seconds=data.get('duration_seconds'),
+            form_score=form_score,
+            notes=data.get('notes'),
+            completed_at=datetime.utcnow()
+        )
+        
+        db.session.add(workout)
+        db.session.commit()
+        
+        # Log the workout completion
+        log_audit(current_user_id, 'WORKOUT_COMPLETED', 'WorkoutHistory', workout.id)
+        
+        return jsonify({
+            'message': 'Workout completed successfully',
+            'workout_id': workout.id,
+            'completed_at': workout.completed_at.isoformat(),
+            'form_score': form_score
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error completing workout: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workouts/my-history', methods=['GET'])
+@jwt_required()
+def get_my_workout_history():
+    """Get workout history for current patient"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # Optional filters
+        limit = request.args.get('limit', 50, type=int)
+        exercise_type = request.args.get('exercise_type')
+        
+        query = WorkoutHistory.query.filter_by(user_id=current_user_id)
+        
+        if exercise_type:
+            query = query.filter_by(exercise_type=exercise_type)
+        
+        workouts = query.order_by(WorkoutHistory.completed_at.desc()).limit(limit).all()
+        
+        workout_list = []
+        for w in workouts:
+            workout_list.append({
+                'id': w.id,
+                'exercise_type': w.exercise_type,
+                'reps_completed': w.reps_completed,
+                'sets_completed': w.sets_completed,
+                'duration_seconds': w.duration_seconds,
+                'form_score': w.form_score,
+                'notes': w.notes,
+                'completed_at': w.completed_at.isoformat(),
+                'video_id': w.video_id
+            })
+        
+        # Calculate summary stats
+        total_workouts = len(workout_list)
+        avg_form_score = sum(w['form_score'] for w in workout_list if w['form_score']) / max(total_workouts, 1)
+        total_reps = sum(w['reps_completed'] * w['sets_completed'] for w in workout_list)
+        
+        return jsonify({
+            'workouts': workout_list,
+            'summary': {
+                'total_workouts': total_workouts,
+                'avg_form_score': round(avg_form_score, 1),
+                'total_reps': total_reps
+            }
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting workout history: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/workouts/progress', methods=['GET'])
+@jwt_required()
+def get_workout_progress():
+    """Get workout progress metrics for patient"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        # Get workouts from last 30 days
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        workouts = WorkoutHistory.query.filter(
+            WorkoutHistory.user_id == current_user_id,
+            WorkoutHistory.completed_at >= thirty_days_ago
+        ).order_by(WorkoutHistory.completed_at.asc()).all()
+        
+        # Group by week
+        weekly_data = {}
+        for workout in workouts:
+            week_key = workout.completed_at.strftime('%Y-W%U')
+            if week_key not in weekly_data:
+                weekly_data[week_key] = {
+                    'workouts': 0,
+                    'total_reps': 0,
+                    'avg_form_score': [],
+                    'week_start': workout.completed_at.strftime('%Y-%m-%d')
+                }
+            
+            weekly_data[week_key]['workouts'] += 1
+            weekly_data[week_key]['total_reps'] += workout.reps_completed * workout.sets_completed
+            if workout.form_score:
+                weekly_data[week_key]['avg_form_score'].append(workout.form_score)
+        
+        # Calculate averages
+        progress_data = []
+        for week, data in sorted(weekly_data.items()):
+            avg_score = sum(data['avg_form_score']) / len(data['avg_form_score']) if data['avg_form_score'] else 0
+            progress_data.append({
+                'week': week,
+                'week_start': data['week_start'],
+                'workouts': data['workouts'],
+                'total_reps': data['total_reps'],
+                'avg_form_score': round(avg_score, 1)
+            })
+        
+        return jsonify({
+            'progress': progress_data,
+            'total_workouts': len(workouts),
+            'current_streak': calculate_workout_streak(workouts)
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting progress: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def calculate_workout_streak(workouts):
+    """Helper function to calculate current workout streak in days"""
+    if not workouts:
+        return 0
+    
+    # Sort by date descending
+    sorted_workouts = sorted(workouts, key=lambda w: w.completed_at, reverse=True)
+    
+    streak = 0
+    current_date = datetime.utcnow().date()
+    
+    for workout in sorted_workouts:
+        workout_date = workout.completed_at.date()
+        days_diff = (current_date - workout_date).days
+        
+        if days_diff == streak:
+            streak += 1
+        elif days_diff > streak:
+            break
+    
+    return streak
+
+
+# ============================================================================
+# WORKOUT TRACKING - THERAPIST SIDE
+# ============================================================================
+
+@app.route('/api/therapist/patients/<int:patient_id>/workouts', methods=['GET'])
+@jwt_required()
+def get_patient_workouts(patient_id):
+    """Therapist views patient's workout history"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Verify patient is assigned to therapist
+        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
+        if not patient_profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Get workout history
+        limit = request.args.get('limit', 100, type=int)
+        workouts = WorkoutHistory.query.filter_by(
+            user_id=patient_id
+        ).order_by(
+            WorkoutHistory.completed_at.desc()
+        ).limit(limit).all()
+        
+        workout_list = []
+        for w in workouts:
+            workout_list.append({
+                'id': w.id,
+                'exercise_type': w.exercise_type,
+                'reps_completed': w.reps_completed,
+                'sets_completed': w.sets_completed,
+                'duration_seconds': w.duration_seconds,
+                'form_score': w.form_score,
+                'notes': w.notes,
+                'completed_at': w.completed_at.isoformat(),
+                'video_id': w.video_id
+            })
+        
+        # Calculate stats
+        total_workouts = len(workout_list)
+        avg_form_score = 0
+        if total_workouts > 0:
+            scores = [w['form_score'] for w in workout_list if w['form_score']]
+            avg_form_score = sum(scores) / len(scores) if scores else 0
+        
+        # Get exercise type breakdown
+        exercise_counts = {}
+        for w in workout_list:
+            exercise_counts[w['exercise_type']] = exercise_counts.get(w['exercise_type'], 0) + 1
+        
+        return jsonify({
+            'workouts': workout_list,
+            'summary': {
+                'total_workouts': total_workouts,
+                'avg_form_score': round(avg_form_score, 1),
+                'exercise_breakdown': exercise_counts,
+                'last_workout': workout_list[0]['completed_at'] if workout_list else None
+            }
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting patient workouts: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/therapist/patients/<int:patient_id>/progress', methods=['GET'])
+@jwt_required()
+def get_patient_progress(patient_id):
+    """Therapist views patient's progress over time"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Verify patient is assigned to therapist
+        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
+        if not patient_profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        # Get workouts from last 90 days
+        ninety_days_ago = datetime.utcnow() - timedelta(days=90)
+        workouts = WorkoutHistory.query.filter(
+            WorkoutHistory.user_id == patient_id,
+            WorkoutHistory.completed_at >= ninety_days_ago
+        ).order_by(WorkoutHistory.completed_at.asc()).all()
+        
+        # Group by week
+        weekly_progress = {}
+        for workout in workouts:
+            week_key = workout.completed_at.strftime('%Y-W%U')
+            if week_key not in weekly_progress:
+                weekly_progress[week_key] = {
+                    'workouts': 0,
+                    'exercises': {},
+                    'avg_form_scores': [],
+                    'week_start': workout.completed_at.strftime('%m/%d/%Y')
+                }
+            
+            weekly_progress[week_key]['workouts'] += 1
+            weekly_progress[week_key]['exercises'][workout.exercise_type] = \
+                weekly_progress[week_key]['exercises'].get(workout.exercise_type, 0) + 1
+            
+            if workout.form_score:
+                weekly_progress[week_key]['avg_form_scores'].append(workout.form_score)
+        
+        # Format for response
+        progress_data = []
+        for week, data in sorted(weekly_progress.items()):
+            avg_score = sum(data['avg_form_scores']) / len(data['avg_form_scores']) if data['avg_form_scores'] else 0
+            progress_data.append({
+                'week': week,
+                'week_start': data['week_start'],
+                'workouts_completed': data['workouts'],
+                'avg_form_score': round(avg_score, 1),
+                'exercises': data['exercises']
+            })
+        
+        return jsonify({
+            'progress': progress_data,
+            'total_workouts_90_days': len(workouts),
+            'current_streak': calculate_workout_streak(workouts)
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting patient progress: {e}")
+        return jsonify({'error': str(e)}), 500
         
     except Exception as e:
         app.logger.error(f"Error getting video details: {e}")
