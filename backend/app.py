@@ -1779,26 +1779,27 @@ def update_patient(patient_id):
 
 @app.route('/api/videos/<int:video_id>/stream', methods=['GET'])
 def stream_video(video_id):
-    """Stream video for in-browser playback - uses query param for auth"""
+    """Stream video for in-browser playback - works for both patients and therapists"""
     try:
-        # Get token from query parameter (since <video> tag can't send headers)
+        # Get token from query parameter (video tags can't send Authorization headers)
         token = request.args.get('token')
         
         if not token:
-            # Also check Authorization header as fallback
+            # Fallback: check Authorization header
             auth_header = request.headers.get('Authorization')
             if auth_header and auth_header.startswith('Bearer '):
                 token = auth_header.split(' ')[1]
             else:
-                return jsonify({'error': 'No authentication token provided'}), 401
+                app.logger.error("No token provided for video stream")
+                return jsonify({'error': 'No authentication token'}), 401
         
-        # Verify JWT token manually
+        # Manually verify token (can't use @jwt_required with query params)
         try:
             from flask_jwt_extended import decode_token
             decoded = decode_token(token)
             current_user_id = int(decoded['sub'])
         except Exception as e:
-            app.logger.error(f"Token verification failed: {e}")
+            app.logger.error(f"Token decode failed: {e}")
             return jsonify({'error': 'Invalid or expired token'}), 401
         
         user = User.query.get(current_user_id)
@@ -1809,19 +1810,30 @@ def stream_video(video_id):
         if not video or video.is_deleted:
             return jsonify({'error': 'Video not found'}), 404
         
-        # Check access - patient can view own, therapist can view assigned patients
-        if user.role == 'user' and video.user_id != current_user_id:
+        # CRITICAL: Check permissions for BOTH patients and therapists
+        has_access = False
+        
+        # Patient can view their own videos
+        if user.role == 'user' and video.user_id == current_user_id:
+            has_access = True
+        
+        # Therapist can view assigned patients' videos
+        if user.role in ['clinician', 'admin']:
+            patient_profile = PatientProfile.query.filter_by(user_id=video.user_id).first()
+            if patient_profile:
+                if user.role == 'admin' or patient_profile.assigned_therapist_id == current_user_id:
+                    has_access = True
+        
+        if not has_access:
+            app.logger.error(f"Access denied: User {current_user_id} tried to access video {video_id}")
             return jsonify({'error': 'Access denied'}), 403
         
-        if user.role == 'clinician':
-            patient_profile = PatientProfile.query.filter_by(user_id=video.user_id).first()
-            if patient_profile and patient_profile.assigned_therapist_id != current_user_id:
-                return jsonify({'error': 'Access denied'}), 403
-        
+        # Get video file path
         video_path = os.path.join(app.config['UPLOAD_FOLDER'], video.encrypted_filename)
         
         if not os.path.exists(video_path):
-            return jsonify({'error': 'Video file not found'}), 404
+            app.logger.error(f"Video file not found: {video_path}")
+            return jsonify({'error': 'Video file not found on server'}), 404
         
         log_audit(current_user_id, 'VIDEO_STREAMED', 'Video', video_id)
         
@@ -1834,56 +1846,64 @@ def stream_video(video_id):
         
     except Exception as e:
         app.logger.error(f"Video streaming error: {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/therapist/patients/<int:patient_id>/videos', methods=['GET'])
+
+@app.route('/api/videos/<int:video_id>/details', methods=['GET'])
 @jwt_required()
-def get_patient_videos_with_analysis(patient_id):
-    """Get all videos for a patient with full analysis results"""
+def get_video_details_for_therapist(video_id):
+    """Get video details - accessible by both patients and therapists"""
     try:
         current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
-        if user.role not in ['clinician', 'admin']:
+        video = Video.query.get(video_id)
+        if not video or video.is_deleted:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Check access permissions
+        has_access = False
+        
+        # Patient can view their own videos
+        if user.role == 'user' and video.user_id == current_user_id:
+            has_access = True
+        
+        # Therapist can view assigned patients' videos
+        if user.role in ['clinician', 'admin']:
+            patient_profile = PatientProfile.query.filter_by(user_id=video.user_id).first()
+            if patient_profile:
+                if user.role == 'admin' or patient_profile.assigned_therapist_id == current_user_id:
+                    has_access = True
+        
+        if not has_access:
             return jsonify({'error': 'Access denied'}), 403
         
-        profile = PatientProfile.query.get(patient_id)
-        if not profile:
-            return jsonify({'error': 'Patient not found'}), 404
+        # Decrypt analysis results if they exist
+        analysis_results = None
+        if video.analysis_results:
+            try:
+                decrypted_data = decrypt_data(video.analysis_results)
+                analysis_results = json.loads(decrypted_data) if isinstance(decrypted_data, str) else decrypted_data
+            except Exception as e:
+                app.logger.error(f"Failed to decrypt analysis results: {e}")
         
-        # Check access
-        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
+        log_audit(current_user_id, 'VIDEO_DETAILS_ACCESSED', 'Video', video_id)
         
-        # Get all videos for this patient
-        videos = Video.query.filter_by(user_id=profile.user_id, is_deleted=False).order_by(
-            Video.uploaded_at.desc()
-        ).all()
-        
-        video_list = []
-        for v in videos:
-            # Decrypt analysis results
-            analysis = None
-            if v.analysis_results:
-                try:
-                    decrypted_data = decrypt_data(v.analysis_results)
-                    analysis = json.loads(decrypted_data) if isinstance(decrypted_data, str) else decrypted_data
-                except Exception as e:
-                    app.logger.error(f"Failed to decrypt analysis: {e}")
-            
-            video_list.append({
-                'id': v.id,
-                'filename': v.filename,
-                'uploaded_at': v.uploaded_at.isoformat(),
-                'file_size': v.file_size,
-                'has_analysis': v.analysis_results is not None,
-                'analysis_results': analysis
-            })
-        
-        return jsonify({'videos': video_list}), 200
+        return jsonify({
+            'id': video.id,
+            'filename': video.filename,
+            'uploaded_at': video.uploaded_at.isoformat(),
+            'file_size': video.file_size,
+            'mime_type': video.mime_type,
+            'access_count': video.access_count,
+            'analysis_results': analysis_results,
+            'has_analysis': analysis_results is not None
+        }), 200
         
     except Exception as e:
+        app.logger.error(f"Error getting video details: {e}")
         return jsonify({'error': str(e)}), 500
-
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
