@@ -651,14 +651,7 @@ def analyze_video(video_id):
 
 """
 COMPLETE PATIENT MANAGEMENT SYSTEM
-Add these to app.py:
-1. Database models (after existing models)
-2. API endpoints (before if __name__)
 """
-
-# ============================================================================
-# DATABASE MODELS - Add after existing models (after ExerciseSession)
-# ============================================================================
 
 class PatientProfile(db.Model):
     """Extended patient information"""
@@ -860,11 +853,12 @@ def get_therapist_patients():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        
 
 @app.route('/api/therapist/patients/<int:patient_id>', methods=['GET'])
 @jwt_required()
 def get_patient_details(patient_id):
-    """Get detailed patient information"""
+    """Get detailed patient information with videos and analysis"""
     try:
         current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
@@ -882,10 +876,35 @@ def get_patient_details(patient_id):
             WorkoutHistory.workout_date.desc()
         ).limit(20).all()
         
-        # Get videos
+        # Get videos WITH ANALYSIS
         videos = Video.query.filter_by(user_id=profile.user_id, is_deleted=False).order_by(
             Video.uploaded_at.desc()
         ).limit(10).all()
+        
+        # Process videos with decrypted analysis
+        video_list = []
+        for v in videos:
+            video_data = {
+                'id': v.id,
+                'filename': v.filename,
+                'uploaded_at': v.uploaded_at.isoformat(),
+                'file_size': v.file_size,
+                'has_analysis': v.analysis_results is not None,
+                'analysis_results': None
+            }
+            
+            # Decrypt analysis if exists
+            if v.analysis_results:
+                try:
+                    decrypted = decrypt_data(v.analysis_results)
+                    if isinstance(decrypted, str):
+                        video_data['analysis_results'] = json.loads(decrypted)
+                    else:
+                        video_data['analysis_results'] = decrypted
+                except Exception as e:
+                    app.logger.error(f"Failed to decrypt analysis for video {v.id}: {e}")
+            
+            video_list.append(video_data)
         
         # Get therapist notes
         notes = TherapistNote.query.filter_by(patient_id=profile.user_id).order_by(
@@ -914,12 +933,7 @@ def get_patient_details(patient_id):
                 'duration': w.duration_minutes,
                 'has_video': w.video_id is not None
             } for w in workouts],
-            'videos': [{
-                'id': v.id,
-                'filename': v.filename,
-                'uploaded_at': v.uploaded_at.isoformat(),
-                'has_analysis': v.analysis_results is not None
-            } for v in videos],
+            'videos': video_list,
             'notes': [{
                 'id': n.id,
                 'type': n.note_type,
@@ -931,8 +945,9 @@ def get_patient_details(patient_id):
         }), 200
         
     except Exception as e:
+        import traceback
+        app.logger.error(f"Error getting patient details: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
-
 
 # -------------------- WORKOUT HISTORY --------------------
 
