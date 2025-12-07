@@ -1778,12 +1778,32 @@ def update_patient(patient_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/videos/<int:video_id>/stream', methods=['GET'])
-@jwt_required()
 def stream_video(video_id):
-    """Stream video for in-browser playback"""
+    """Stream video for in-browser playback - uses query param for auth"""
     try:
-        current_user_id = int(get_jwt_identity())
+        # Get token from query parameter (since <video> tag can't send headers)
+        token = request.args.get('token')
+        
+        if not token:
+            # Also check Authorization header as fallback
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+            else:
+                return jsonify({'error': 'No authentication token provided'}), 401
+        
+        # Verify JWT token manually
+        try:
+            from flask_jwt_extended import decode_token
+            decoded = decode_token(token)
+            current_user_id = int(decoded['sub'])
+        except Exception as e:
+            app.logger.error(f"Token verification failed: {e}")
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        
         user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 401
         
         video = Video.query.get(video_id)
         if not video or video.is_deleted:
@@ -1805,6 +1825,7 @@ def stream_video(video_id):
         
         log_audit(current_user_id, 'VIDEO_STREAMED', 'Video', video_id)
         
+        # Return video file for streaming
         return send_file(
             video_path,
             mimetype=video.mime_type or 'video/mp4',
@@ -1812,6 +1833,7 @@ def stream_video(video_id):
         )
         
     except Exception as e:
+        app.logger.error(f"Video streaming error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/therapist/patients/<int:patient_id>/videos', methods=['GET'])
