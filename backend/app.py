@@ -1903,11 +1903,7 @@ def get_video_details_for_therapist(video_id):
         }), 200
 
 
-    """
-WORKOUT TRACKING SYSTEM - BACKEND ENDPOINTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ADD THESE ENDPOINTS TO app.py
+"""
 
 This system tracks:
 1. Patient logs completed workouts
@@ -2251,9 +2247,6 @@ def get_patient_progress(patient_id):
     except Exception as e:
         app.logger.error(f"Error getting patient progress: {e}")
         return jsonify({'error': str(e)}), 500
-        
-    except Exception as e:
-        app.logger.error(f"Error getting video details: {e}")
-        return jsonify({'error': str(e)}), 500
+ 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
