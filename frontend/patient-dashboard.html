@@ -17,7 +17,6 @@
             min-height: 100vh;
         }
 
-     
         .navbar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -225,19 +224,6 @@
             margin: 5px 0;
         }
 
-        .video-thumbnail {
-            width: 100%;
-            height: 150px;
-            background: #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 3em;
-        }
-
         .progress-bar {
             background: #e0e0e0;
             height: 10px;
@@ -250,74 +236,6 @@
             background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             height: 100%;
             transition: width 0.3s;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .close-modal {
-            font-size: 2em;
-            color: #999;
-            cursor: pointer;
-            border: none;
-            background: none;
-        }
-
-        .close-modal:hover {
-            color: #333;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 15px;
-        }
-
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
         }
 
         .alert {
@@ -388,6 +306,203 @@
             background: #dbeafe;
             color: #1e40af;
         }
+
+        /* ============================================ */
+        /* ASSIGNED EXERCISES WIDGET STYLES */
+        /* ============================================ */
+        .assigned-exercises-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .assigned-exercises-section h2 {
+            margin-top: 0;
+            color: #2d3748;
+            border-bottom: 3px solid #805ad5;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .assigned-exercise-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #fff 0%, #f7fafc 100%);
+        }
+
+        .assigned-exercise-card:hover {
+            border-color: #805ad5;
+            box-shadow: 0 4px 12px rgba(128, 90, 213, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .assigned-exercise-card.completed {
+            border-color: #48bb78;
+            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
+        }
+
+        .exercise-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .exercise-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .exercise-title h3 {
+            margin: 0;
+            color: #2d3748;
+            font-size: 1.2em;
+        }
+
+        .exercise-type-badge {
+            background: #805ad5;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .completion-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .completion-status.pending {
+            color: #d68910;
+        }
+
+        .completion-status.completed {
+            color: #0e6655;
+        }
+
+        .exercise-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-label {
+            font-size: 0.85em;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #805ad5;
+        }
+
+        .therapist-instructions {
+            background: #fffaf0;
+            border-left: 4px solid #f6ad55;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .therapist-instructions strong {
+            color: #c05621;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .exercise-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-start-exercise {
+            flex: 1;
+            background: linear-gradient(135deg, #805ad5 0%, #9f7aea 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-start-exercise:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(128, 90, 213, 0.4);
+        }
+
+        .btn-mark-complete {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-mark-complete:hover {
+            background: #38a169;
+        }
+
+        .no-assignments {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .no-assignments-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .completion-progress {
+            background: #e2e8f0;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .completion-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+            transition: width 0.3s;
+        }
+
+        .times-completed {
+            font-size: 0.9em;
+            color: #718096;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -397,7 +512,7 @@
             <div class="user-info">
                 <span id="userName">Loading...</span>
             </div>
-             <div class="nav-buttons">
+            <div class="nav-buttons">
                 <a href="patient-progress.html" class="btn btn-outline">📊 Progress</a>
                 <button class="btn btn-logout" onclick="logout()">Logout</button>
             </div>
@@ -444,6 +559,20 @@
             </div>
         </div>
 
+        <!-- ASSIGNED EXERCISES SECTION - NEW! -->
+        <div class="assigned-exercises-section">
+            <h2>
+                <span>📋</span>
+                <span>Assigned Exercises from Your Therapist</span>
+            </h2>
+            <div id="assignedExercisesContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading your assigned exercises...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Upload Video Section -->
         <div class="section">
             <div class="section-header">
@@ -476,39 +605,14 @@
             <div id="analysisResult" class="analysis-result" style="display: none;"></div>
         </div>
 
-        <!-- Assigned Exercises -->
+        <!-- Exercise Library -->
         <div class="section">
             <div class="section-header">
-                <h2>💪 Your Assigned Exercises</h2>
-                <button class="btn btn-secondary" onclick="showExerciseLibrary()">View Exercise Library</button>
+                <h2>💪 Exercise Library</h2>
             </div>
             
-            <div class="exercise-list" id="assignedExercises">
+            <div class="exercise-list" id="exerciseLibrary">
                 <!-- Exercises will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Progress Tracking -->
-        <div class="section">
-            <div class="section-header">
-                <h2>📈 Recent Activity</h2>
-            </div>
-            
-            <div id="recentActivity">
-                <!-- Recent videos will be loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Exercise Detail Modal -->
-    <div id="exerciseModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="exerciseModalTitle">Exercise Details</h2>
-                <button class="close-modal" onclick="closeExerciseModal()">&times;</button>
-            </div>
-            <div id="exerciseModalContent">
-                <!-- Content loaded dynamically -->
             </div>
         </div>
     </div>
@@ -546,7 +650,7 @@
             await Promise.all([
                 loadStats(),
                 loadAssignedExercises(),
-                loadRecentActivity()
+                loadExerciseLibrary()
             ]);
         }
 
@@ -556,19 +660,169 @@
             document.getElementById('thisWeek').textContent = '2';
         }
 
+        // ============================================
+        // LOAD ASSIGNED EXERCISES - NEW!
+        // ============================================
         async function loadAssignedExercises() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/patient/assigned-exercises`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load assigned exercises');
+                }
+                
+                const data = await response.json();
+                displayAssignedExercises(data.assigned_exercises);
+                
+            } catch (error) {
+                console.error('Error loading assigned exercises:', error);
+                document.getElementById('assignedExercisesContainer').innerHTML = `
+                    <p style="text-align: center; color: #e53e3e;">Failed to load assigned exercises</p>
+                `;
+            }
+        }
+
+        // Display assigned exercises
+        function displayAssignedExercises(exercises) {
+            const container = document.getElementById('assignedExercisesContainer');
+            
+            if (exercises.length === 0) {
+                container.innerHTML = `
+                    <div class="no-assignments">
+                        <div class="no-assignments-icon">📭</div>
+                        <h3>No Assigned Exercises</h3>
+                        <p>Your therapist hasn't assigned any exercises yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = exercises.map(exercise => {
+                const daysUntilDue = exercise.due_date ? 
+                    Math.ceil((new Date(exercise.due_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                
+                const completionPercentage = exercise.frequency_per_week > 0 ? 
+                    Math.min(100, (exercise.times_completed / exercise.frequency_per_week) * 100) : 0;
+                
+                return `
+                    <div class="assigned-exercise-card ${exercise.completed ? 'completed' : ''}">
+                        <div class="exercise-card-header">
+                            <div class="exercise-title">
+                                <h3>${exercise.video_filename}</h3>
+                                <span class="exercise-type-badge">${exercise.exercise_type}</span>
+                            </div>
+                            <div class="completion-status ${exercise.completed ? 'completed' : 'pending'}">
+                                ${exercise.completed ? '✓ Completed' : '⏳ In Progress'}
+                            </div>
+                        </div>
+                        
+                        ${exercise.instructions ? `
+                            <div class="therapist-instructions">
+                                <strong>💬 Instructions from ${exercise.therapist_name}:</strong>
+                                ${exercise.instructions}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="exercise-details-grid">
+                            <div class="detail-item">
+                                <div class="detail-label">Target Reps</div>
+                                <div class="detail-value">${exercise.target_reps}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Sets</div>
+                                <div class="detail-value">${exercise.target_sets}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Per Week</div>
+                                <div class="detail-value">${exercise.frequency_per_week}x</div>
+                            </div>
+                            ${exercise.form_score_target ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Target Score</div>
+                                    <div class="detail-value">${Math.round(exercise.form_score_target)}%</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${daysUntilDue !== null ? `
+                            <p style="text-align: center; color: ${daysUntilDue < 3 ? '#e53e3e' : '#718096'}; font-weight: 600;">
+                                📅 Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}
+                            </p>
+                        ` : ''}
+                        
+                        <!-- Weekly Progress -->
+                        <div class="completion-progress">
+                            <div class="completion-progress-bar" style="width: ${completionPercentage}%"></div>
+                        </div>
+                        <p class="times-completed">
+                            Completed ${exercise.times_completed} / ${exercise.frequency_per_week} times this week
+                            ${exercise.last_completed ? `<br>Last: ${new Date(exercise.last_completed).toLocaleDateString()}` : ''}
+                        </p>
+                        
+                        <div class="exercise-actions">
+                            <button class="btn-start-exercise" 
+                                onclick="viewAssignedVideo(${exercise.video_id})">
+                                ▶ View Exercise Video
+                            </button>
+                            ${!exercise.completed ? `
+                                <button class="btn-mark-complete" 
+                                    onclick="markAssignmentComplete(${exercise.assignment_id})">
+                                    ✓ Mark Complete
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // View assigned video
+        function viewAssignedVideo(videoId) {
+            window.location.href = `analysis-report.html?video_id=${videoId}`;
+        }
+
+        // Mark assignment as complete
+        async function markAssignmentComplete(assignmentId) {
+            if (!confirm('Mark this exercise as complete?')) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/patient/assigned-exercises/${assignmentId}/complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to mark as complete');
+                }
+                
+                showAlert('✓ Exercise marked as complete!', 'success');
+                loadAssignedExercises(); // Reload
+                
+            } catch (error) {
+                console.error('Error marking complete:', error);
+                showAlert('Failed to mark as complete', 'error');
+            }
+        }
+
+        // Load exercise library (demo videos)
+        async function loadExerciseLibrary() {
             try {
                 const response = await fetch(`${API_URL}/api/demos`);
                 const demos = await response.json();
 
-                const exercisesDiv = document.getElementById('assignedExercises');
+                const exercisesDiv = document.getElementById('exerciseLibrary');
                 
                 if (demos && demos.length > 0) {
                     exercisesDiv.innerHTML = demos.map(exercise => `
-                        <div class="exercise-card" style="cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" 
-                             onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.15)';" 
-                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';"
-                             onclick="goToExercise('${exercise.exercise_type}')">
+                        <div class="exercise-card" style="cursor: pointer;" onclick="goToExercise('${exercise.exercise_type}')">
                             <div style="display: flex; gap: 15px; align-items: center;">
                                 <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 2em; flex-shrink: 0;">
                                     ${getExerciseEmoji(exercise.exercise_type)}
@@ -588,11 +842,11 @@
                         </div>
                     `).join('');
                 } else {
-                    exercisesDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 40px 0;">No exercises available. Please contact your therapist to get exercise assignments.</p>';
+                    exercisesDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 40px 0;">No exercises available.</p>';
                 }
             } catch (error) {
                 console.error('Error loading exercises:', error);
-                document.getElementById('assignedExercises').innerHTML = '<p style="text-align: center; color: #c33;">Failed to load exercises. Please refresh the page.</p>';
+                document.getElementById('exerciseLibrary').innerHTML = '<p style="text-align: center; color: #c33;">Failed to load exercises.</p>';
             }
         }
 
@@ -610,21 +864,6 @@
 
         function goToExercise(exerciseType) {
             window.location.href = `exercise-detail.html?type=${exerciseType}`;
-        }
-
-        function showExerciseLibrary() {
-            document.getElementById('assignedExercises').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function viewExerciseDemo(exerciseName) {
-            // Convert name to type
-            const type = exerciseName.toLowerCase().replace(/\s+/g, '_');
-            goToExercise(type);
-        }
-
-        async function loadRecentActivity() {
-            const activityDiv = document.getElementById('recentActivity');
-            activityDiv.innerHTML = '<p style="color: #999;">No recent activity. Upload your first video to get started!</p>';
         }
 
         // File upload handling
@@ -676,17 +915,11 @@
         async function uploadAndAnalyze() {
             if (!selectedFile) return;
 
-            // Check file size (max 500MB)
-            const maxSize = 500 * 1024 * 1024; // 500MB
+            const maxSize = 500 * 1024 * 1024;
             if (selectedFile.size > maxSize) {
-                showAlert(`File too large! Maximum size is 500MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB`, 'error');
+                showAlert(`File too large! Maximum size is 500MB.`, 'error');
                 return;
             }
-
-            console.log('Starting upload...');
-            console.log('File name:', selectedFile.name);
-            console.log('File size:', (selectedFile.size / 1024 / 1024).toFixed(2), 'MB');
-            console.log('File type:', selectedFile.type);
 
             const loading = document.getElementById('uploadLoading');
             const videoInfo = document.getElementById('videoInfo');
@@ -696,12 +929,8 @@
 
             try {
                 const token = localStorage.getItem('token');
-                console.log('Token exists:', !!token);
-
                 const formData = new FormData();
                 formData.append('video', selectedFile);
-
-                console.log('Sending request to:', `${API_URL}/api/videos/upload`);
 
                 const response = await fetch(`${API_URL}/api/videos/upload`, {
                     method: 'POST',
@@ -711,24 +940,17 @@
                     body: formData
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-
                 const data = await response.json();
-                console.log('Response data:', data);
 
                 if (response.ok) {
                     showAlert('Video uploaded successfully! Analyzing...', 'success');
-                    
-                    // Analyze the video
                     await analyzeVideo(data.video_id);
                 } else {
                     throw new Error(data.error || data.details || 'Upload failed');
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                console.error('Error stack:', error.stack);
-                showAlert(`Upload failed: ${error.message}. Check console for details.`, 'error');
+                showAlert(`Upload failed: ${error.message}`, 'error');
             } finally {
                 loading.style.display = 'none';
                 cancelUpload();
@@ -746,24 +968,19 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('Analysis response:', data);
                     
-                    // Backend returns: { results: { exercise_type, average_accuracy, total_frames, ... } }
-                    // Convert to format displayAnalysisResult expects
                     const displayData = {
                         video_id: videoId,
                         reps: data.results?.total_reps || 0,
                         form_score: data.results?.average_accuracy || 0,
-                        feedback: data.results?.most_common_issues?.join(', ') || 'Good job! Keep up the great work.',
+                        feedback: data.results?.most_common_issues?.join(', ') || 'Good job!',
                         exercise_type: data.results?.exercise_type || 'unknown'
                     };
                     
                     displayAnalysisResult(displayData);
-                    loadRecentActivity(); // Refresh activity list
                 } else {
                     const errorData = await response.json();
-                    console.error('Analysis failed:', errorData);
-                    showAlert(`Analysis failed: ${errorData.error || 'Unknown error'}`, 'error');
+                    showAlert(`Analysis failed: ${errorData.error}`, 'error');
                 }
             } catch (error) {
                 console.error('Analysis error:', error);
@@ -776,12 +993,12 @@
             resultDiv.innerHTML = `
                 <h3 style="color: #667eea; margin-bottom: 15px;">Analysis Complete! ✅</h3>
                 <div style="margin: 15px 0;">
-                    <span class="badge badge-info">Reps Detected: ${result.reps || 'N/A'}</span>
-                    <span class="badge badge-success">Form Score: ${result.form_score || 'N/A'}</span>
+                    <span class="badge badge-info">Reps: ${result.reps}</span>
+                    <span class="badge badge-success">Form Score: ${result.form_score}%</span>
                 </div>
-                <p style="color: #666; margin-top: 15px;">${result.feedback || 'Good job! Keep up the great work.'}</p>
+                <p style="color: #666; margin-top: 15px;">${result.feedback}</p>
                 <button class="btn btn-primary" style="margin-top: 15px;" onclick="downloadReport(${result.video_id})">
-                    📄 Download Full Report
+                    📄 View Full Report
                 </button>
             `;
             resultDiv.style.display = 'block';
@@ -789,19 +1006,6 @@
 
         function downloadReport(videoId) {
             window.open(`analysis-report.html?video_id=${videoId}`, '_blank');
-        }
-
-        function viewExerciseDemo(exerciseName) {
-            // Show modal with exercise demo
-            showAlert(`Playing demo for ${exerciseName}`, 'success');
-        }
-
-        function showExerciseLibrary() {
-            showAlert('Exercise library coming soon!', 'success');
-        }
-
-        function closeExerciseModal() {
-            document.getElementById('exerciseModal').style.display = 'none';
         }
 
         function showAlert(message, type) {
