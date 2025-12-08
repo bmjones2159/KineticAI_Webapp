@@ -1408,6 +1408,14 @@ function addAssignExerciseButton(patientId, patientName) {
                 </div>
             `;
 
+                      
+            <div style="margin: 20px 0; text-align: center; padding: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px;">
+                <button class="btn btn-primary" style="font-size: 1.1em; padding: 15px 40px; background: white; color: #10b981; border: none; font-weight: 600;" 
+                    onclick="openAssignExerciseModal(${patient.user_id}, '${(patient.full_name || patient.username).replace(/'/g, "\\'")}')">
+                    📋 Assign Exercise Video to This Patient
+                </button>
+            </div>
+
             // Display each video with full review interface
             if (patient.videos && patient.videos.length > 0) {
                 patient.videos.forEach((video, index) => {
