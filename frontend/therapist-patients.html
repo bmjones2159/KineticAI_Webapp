@@ -640,112 +640,7 @@
             background: #f8d7da;
             color: #721c24;
         }
-    </style>
-</head>
-<body>
-    <div class="navbar">
-        <h1>👥 Patient Management</h1>
-        <div class="nav-buttons">
-            <a href="therapist-dashboard.html" class="btn btn-primary">← Back to Dashboard</a>
-            <button class="btn btn-secondary" onclick="logout()">Logout</button>
-        </div>
-    </div>
 
-    <div class="container">
-        <div class="content-section">
-            <div class="section-header">
-                <h2>My Patients</h2>
-                <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add New Patient</button>
-            </div>
-
-            <div id="loadingState" class="loading">
-                <div class="spinner"></div>
-                <p>Loading patients...</p>
-            </div>
-
-            <div id="patientGrid" class="patient-grid" style="display: none;"></div>
-
-            <div id="emptyState" class="empty-state" style="display: none;">
-                <div class="empty-state-icon">👥</div>
-                <h3>No Patients Yet</h3>
-                <p>Click "Add New Patient" to get started</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Patient Modal -->
-    <div id="addPatientModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2>Add New Patient</h2>
-                <button class="close-btn" onclick="closeAddPatientModal()">×</button>
-            </div>
-
-            <div id="addPatientAlert"></div>
-
-            <form id="addPatientForm" onsubmit="createPatient(event)">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Full Name *</label>
-                        <input type="text" id="fullName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Date of Birth</label>
-                        <input type="date" id="dateOfBirth">
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Email *</label>
-                        <input type="email" id="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Phone</label>
-                        <input type="tel" id="phone">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Username *</label>
-                    <input type="text" id="username" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Temporary Password *</label>
-                    <input type="text" id="password" value="Patient123!" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Primary Diagnosis *</label>
-                    <input type="text" id="diagnosis" required>
-                </div>
-
-                <div class="form-group">
-                    <label>Injury Date</label>
-                    <input type="date" id="injuryDate">
-                </div>
-
-                <div class="form-group">
-                    <label>Treatment Goals</label>
-                    <textarea id="treatmentGoals"></textarea>
-                </div>
-
-                <div style="display: flex; gap: 10px; margin-top: 25px;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create Patient</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- 
-THERAPIST ASSIGN EXERCISE VIDEO MODAL
-Add this to therapist-patients.html after the patient file modal
--->
-
-<style>
 /* Assignment Modal Styling */
 .assign-exercise-modal {
     display: none;
@@ -900,7 +795,104 @@ Add this to therapist-patients.html after the patient file modal
 .btn-remove-assignment:hover {
     background: #c53030;
 }
-</style>
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>👥 Patient Management</h1>
+        <div class="nav-buttons">
+            <a href="therapist-dashboard.html" class="btn btn-primary">← Back to Dashboard</a>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="content-section">
+            <div class="section-header">
+                <h2>My Patients</h2>
+                <button class="btn btn-primary" onclick="openAddPatientModal()">+ Add New Patient</button>
+            </div>
+
+            <div id="loadingState" class="loading">
+                <div class="spinner"></div>
+                <p>Loading patients...</p>
+            </div>
+
+            <div id="patientGrid" class="patient-grid" style="display: none;"></div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">👥</div>
+                <h3>No Patients Yet</h3>
+                <p>Click "Add New Patient" to get started</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Patient Modal -->
+    <div id="addPatientModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Add New Patient</h2>
+                <button class="close-btn" onclick="closeAddPatientModal()">×</button>
+            </div>
+
+            <div id="addPatientAlert"></div>
+
+            <form id="addPatientForm" onsubmit="createPatient(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="dateOfBirth">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="phone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" id="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Temporary Password *</label>
+                    <input type="text" id="password" value="Patient123!" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Primary Diagnosis *</label>
+                    <input type="text" id="diagnosis" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Injury Date</label>
+                    <input type="date" id="injuryDate">
+                </div>
+
+                <div class="form-group">
+                    <label>Treatment Goals</label>
+                    <textarea id="treatmentGoals"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Create Patient</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddPatientModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 <!-- Assignment Modal -->
 <div id="assignExerciseModal" class="assign-exercise-modal">
@@ -1013,7 +1005,7 @@ async function loadAvailableVideos() {
         
     } catch (error) {
         console.error('Error loading videos:', error);
-        showMessage('Failed to load available videos', 'error');
+        alert('Failed to load available videos');
     }
 }
 
@@ -1057,7 +1049,7 @@ function selectVideoForAssignment(videoId) {
 // Submit assignment
 async function submitExerciseAssignment() {
     if (!selectedVideoForAssignment) {
-        showMessage('Please select a video to assign', 'error');
+        alert('Please select a video to assign');
         return;
     }
     
@@ -1092,7 +1084,7 @@ async function submitExerciseAssignment() {
         }
         
         const result = await response.json();
-        showMessage('✓ Exercise assigned successfully!', 'success');
+        alert('✓ Exercise assigned successfully!');
         
         // Refresh assignments list
         loadCurrentAssignments(currentAssignmentPatientId);
@@ -1108,7 +1100,7 @@ async function submitExerciseAssignment() {
         
     } catch (error) {
         console.error('Error assigning exercise:', error);
-        showMessage(error.message, 'error');
+        alert(error.message);
     }
 }
 
@@ -1180,30 +1172,16 @@ async function removeAssignment(assignmentId) {
         
         if (!response.ok) throw new Error('Failed to remove assignment');
         
-        showMessage('Assignment removed', 'success');
+        alert('Assignment removed');
         loadCurrentAssignments(currentAssignmentPatientId);
         
     } catch (error) {
         console.error('Error removing assignment:', error);
-        showMessage('Failed to remove assignment', 'error');
+        alert('Failed to remove assignment');
     }
 }
-
-// Add button to patient file modal (add this to displayPatientReview function)
-// After the patient info section, add:
-function addAssignExerciseButton(patientId, patientName) {
-    return `
-        <div style="margin: 20px 0; text-align: center;">
-            <button class="btn btn-primary" onclick="openAssignExerciseModal(${patientId}, '${patientName}')">
-                📋 Assign Exercise Video
-            </button>
-        </div>
-    `;
-}
-
-// Update displayPatientReview to include assignment button
-// Find the patient info section and add the button after it
 </script>
+
     <!-- Patient Review Modal -->
     <div id="patientReviewModal" class="modal">
         <div class="modal-content">
@@ -1396,6 +1374,14 @@ function addAssignExerciseButton(patientId, patientName) {
                     </div>
                 </div>
 
+                <!-- Assign Exercise Button -->
+                <div style="margin: 20px 0; text-align: center; padding: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px;">
+                    <button class="btn btn-primary" style="font-size: 1.1em; padding: 15px 40px; background: white; color: #10b981; border: none; font-weight: 600;" 
+                        onclick="openAssignExerciseModal(${patient.user_id}, '${(patient.full_name || patient.username).replace(/'/g, "\\'")}')">
+                        📋 Assign Exercise Video to This Patient
+                    </button>
+                </div>
+
                 <!-- Workout Progress Section -->
                 <div class="patient-info-section">
                     <h3>📊 Workout Progress & Compliance</h3>
@@ -1407,14 +1393,6 @@ function addAssignExerciseButton(patientId, patientName) {
                     </div>
                 </div>
             `;
-
-                      
-            <div style="margin: 20px 0; text-align: center; padding: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px;">
-                <button class="btn btn-primary" style="font-size: 1.1em; padding: 15px 40px; background: white; color: #10b981; border: none; font-weight: 600;" 
-                    onclick="openAssignExerciseModal(${patient.user_id}, '${(patient.full_name || patient.username).replace(/'/g, "\\'")}')">
-                    📋 Assign Exercise Video to This Patient
-                </button>
-            </div>
 
             // Display each video with full review interface
             if (patient.videos && patient.videos.length > 0) {
