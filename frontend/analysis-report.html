@@ -164,9 +164,14 @@
 </head>
 <body>
     <div class="navbar">
-        <h1>📊 Analysis Report</h1>
-        <button class="btn" onclick="goBack()">← Back</button>
+    <h1>📊 Video Analysis Results</h1>
+    <div class="nav-buttons">
+        <button class="btn btn-primary" onclick="window.location.href='patient-dashboard.html'">
+            ← Back to Dashboard
+        </button>
+        <button class="btn btn-secondary" onclick="logout()">Logout</button>
     </div>
+</div>
 
     <div class="container">
         <div id="loadingState" class="loading">
