@@ -225,390 +225,26 @@ class TherapistNote(db.Model):
     therapist = db.relationship('User', foreign_keys=[therapist_id], backref='written_notes')
     video = db.relationship('Video', backref='therapist_notes')
 
-
 class ExerciseVideoAssignment(db.Model):
     """Videos assigned by therapist to patient as exercise homework"""
     __tablename__ = 'exercise_video_assignments'
     id = db.Column(db.Integer, primary_key=True)
-    
-    # Who and What
     patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
-    
-    # Assignment Details
-    exercise_type = db.Column(db.String(50))  # squat, pushup, etc
-    target_reps = db.Column(db.Integer)  # How many reps patient should do
+    exercise_type = db.Column(db.String(50))
+    target_reps = db.Column(db.Integer)
     target_sets = db.Column(db.Integer, default=3)
     frequency_per_week = db.Column(db.Integer, default=3)
-    instructions = db.Column(db.Text)  # Therapist's custom instructions
-    
-    # Status Tracking
+    instructions = db.Column(db.Text)
     assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
-    due_date = db.Column(db.Date)  # Optional deadline
+    due_date = db.Column(db.Date)
     is_active = db.Column(db.Boolean, default=True)
     completed = db.Column(db.Boolean, default=False)
     completed_at = db.Column(db.DateTime)
-    
-    # Relationships
     patient = db.relationship('User', foreign_keys=[patient_id], backref='assigned_exercise_videos')
     therapist = db.relationship('User', foreign_keys=[therapist_id], backref='exercise_assignments_created')
     video = db.relationship('Video', backref='exercise_assignments')
-
-
-# ============================================================================
-# THERAPIST ENDPOINTS - Assign Exercise Videos
-# ============================================================================
-
-@app.route('/api/therapist/assign-exercise-video', methods=['POST'])
-@jwt_required()
-def assign_exercise_video():
-    """Therapist assigns a video to patient as exercise homework"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        # Only therapists and admins can assign
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Only therapists can assign exercises'}), 403
-        
-        data = request.get_json()
-        patient_id = data.get('patient_id')
-        video_id = data.get('video_id')
-        
-        # Validate patient belongs to therapist
-        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
-        if not patient_profile:
-            return jsonify({'error': 'Patient not found'}), 404
-        
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'This patient is not assigned to you'}), 403
-        
-        # Validate video exists
-        video = Video.query.get(video_id)
-        if not video or video.is_deleted:
-            return jsonify({'error': 'Video not found'}), 404
-        
-        # Get exercise type from video analysis if available
-        exercise_type = data.get('exercise_type')
-        if not exercise_type and video.analysis_results:
-            try:
-                decrypted = decrypt_data(video.analysis_results)
-                analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                exercise_type = analysis.get('exercise_type', 'unknown')
-            except:
-                exercise_type = 'unknown'
-        
-        # Create assignment
-        assignment = ExerciseVideoAssignment(
-            patient_id=patient_id,
-            therapist_id=current_user_id,
-            video_id=video_id,
-            exercise_type=exercise_type,
-            target_reps=data.get('target_reps', 12),
-            target_sets=data.get('target_sets', 3),
-            frequency_per_week=data.get('frequency_per_week', 3),
-            instructions=data.get('instructions', ''),
-            due_date=datetime.strptime(data.get('due_date'), '%Y-%m-%d').date() if data.get('due_date') else None
-        )
-        
-        db.session.add(assignment)
-        db.session.commit()
-        
-        log_audit(current_user_id, 'EXERCISE_VIDEO_ASSIGNED', 'ExerciseVideoAssignment', 
-                 assignment.id, details=f"Assigned video {video_id} to patient {patient_id}")
-        
-        return jsonify({
-            'message': 'Exercise video assigned successfully',
-            'assignment_id': assignment.id,
-            'exercise_type': exercise_type,
-            'video_filename': video.filename
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Error assigning exercise video: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/therapist/patients/<int:patient_id>/assigned-videos', methods=['GET'])
-@jwt_required()
-def get_patient_assigned_videos(patient_id):
-    """Get all videos assigned to a specific patient"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Verify access
-        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
-        if not patient_profile:
-            return jsonify({'error': 'Patient not found'}), 404
-        
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
-        
-        # Get assignments
-        assignments = ExerciseVideoAssignment.query.filter_by(
-            patient_id=patient_id,
-            is_active=True
-        ).order_by(ExerciseVideoAssignment.assigned_at.desc()).all()
-        
-        result = []
-        for assignment in assignments:
-            video = assignment.video
-            
-            # Get analysis if exists
-            analysis = None
-            if video.analysis_results:
-                try:
-                    decrypted = decrypt_data(video.analysis_results)
-                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                except:
-                    pass
-            
-            result.append({
-                'assignment_id': assignment.id,
-                'video_id': video.id,
-                'video_filename': video.filename,
-                'exercise_type': assignment.exercise_type,
-                'target_reps': assignment.target_reps,
-                'target_sets': assignment.target_sets,
-                'frequency_per_week': assignment.frequency_per_week,
-                'instructions': assignment.instructions,
-                'assigned_at': assignment.assigned_at.isoformat(),
-                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
-                'completed': assignment.completed,
-                'completed_at': assignment.completed_at.isoformat() if assignment.completed_at else None,
-                'form_score': analysis.get('average_accuracy') if analysis else None
-            })
-        
-        return jsonify({'assignments': result}), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error getting patient assigned videos: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-
-# ============================================================================
-# EXERCISE VIDEO ASSIGNMENT MODEL
-# ============================================================================
-# COPY THIS ENTIRE BLOCK and paste it in app.py after the DemoVideo model
-# (around line 300-400, right after class DemoVideo(db.Model):)
-# ============================================================================
-
-class ExerciseVideoAssignment(db.Model):
-    """Videos assigned by therapist to patient as exercise homework"""
-    __tablename__ = 'exercise_video_assignments'
-    
-    # Primary key
-    id = db.Column(db.Integer, primary_key=True)
-    
-    # Foreign keys
-    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
-    
-    # Exercise details
-    exercise_type = db.Column(db.String(50))  # 'squat', 'pushup', etc.
-    target_reps = db.Column(db.Integer)  # How many reps patient should do
-    target_sets = db.Column(db.Integer, default=3)  # How many sets
-    frequency_per_week = db.Column(db.Integer, default=3)  # Times per week
-    instructions = db.Column(db.Text)  # Custom instructions from therapist
-    
-    # Tracking fields
-    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
-    due_date = db.Column(db.Date)  # Optional deadline
-    is_active = db.Column(db.Boolean, default=True)  # For soft delete
-    completed = db.Column(db.Boolean, default=False)  # Patient marked complete
-    completed_at = db.Column(db.DateTime)  # When patient completed it
-    
-    # Relationships
-    patient = db.relationship('User', foreign_keys=[patient_id], backref='assigned_exercise_videos')
-    therapist = db.relationship('User', foreign_keys=[therapist_id], backref='exercise_assignments_created')
-    video = db.relationship('Video', backref='exercise_assignments')
-    
-    def __repr__(self):
-        return f'<ExerciseVideoAssignment {self.id}: Video {self.video_id} -> Patient {self.patient_id}>'
-
-
-@app.route('/api/therapist/assigned-videos/<int:assignment_id>', methods=['DELETE'])
-@jwt_required()
-def remove_exercise_assignment(assignment_id):
-    """Therapist removes/deactivates an exercise assignment"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        assignment = ExerciseVideoAssignment.query.get(assignment_id)
-        if not assignment:
-            return jsonify({'error': 'Assignment not found'}), 404
-        
-        # Verify therapist owns this assignment
-        if user.role == 'clinician' and assignment.therapist_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
-        
-        # Soft delete - deactivate instead of deleting
-        assignment.is_active = False
-        db.session.commit()
-        
-        log_audit(current_user_id, 'EXERCISE_ASSIGNMENT_REMOVED', 'ExerciseVideoAssignment', assignment_id)
-        
-        return jsonify({'message': 'Exercise assignment removed'}), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-# ============================================================================
-# PATIENT ENDPOINTS - View and Complete Assigned Exercises
-# ============================================================================
-
-@app.route('/api/patient/assigned-exercises', methods=['GET'])
-@jwt_required()
-def get_my_assigned_exercises():
-    """Patient gets their assigned exercise videos"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        
-        # Get active assignments
-        assignments = ExerciseVideoAssignment.query.filter_by(
-            patient_id=current_user_id,
-            is_active=True
-        ).order_by(ExerciseVideoAssignment.assigned_at.desc()).all()
-        
-        result = []
-        for assignment in assignments:
-            video = assignment.video
-            
-            # Get video analysis
-            analysis = None
-            if video.analysis_results:
-                try:
-                    decrypted = decrypt_data(video.analysis_results)
-                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                except:
-                    pass
-            
-            # Check if completed via workout history
-            completed_workout = WorkoutHistory.query.filter_by(
-                user_id=current_user_id,
-                video_id=video.id
-            ).order_by(WorkoutHistory.workout_date.desc()).first()
-            
-            result.append({
-                'assignment_id': assignment.id,
-                'video_id': video.id,
-                'video_filename': video.filename,
-                'exercise_type': assignment.exercise_type,
-                'target_reps': assignment.target_reps,
-                'target_sets': assignment.target_sets,
-                'frequency_per_week': assignment.frequency_per_week,
-                'instructions': assignment.instructions,
-                'assigned_at': assignment.assigned_at.isoformat(),
-                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
-                'completed': assignment.completed,
-                'therapist_name': assignment.therapist.username,
-                'form_score_target': analysis.get('average_accuracy') if analysis else None,
-                'last_completed': completed_workout.workout_date.isoformat() if completed_workout else None,
-                'times_completed': WorkoutHistory.query.filter_by(
-                    user_id=current_user_id,
-                    video_id=video.id
-                ).count()
-            })
-        
-        return jsonify({'assigned_exercises': result}), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error getting assigned exercises: {e}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/patient/assigned-exercises/<int:assignment_id>/complete', methods=['POST'])
-@jwt_required()
-def mark_assignment_complete(assignment_id):
-    """Patient marks an assigned exercise as complete"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        
-        assignment = ExerciseVideoAssignment.query.get(assignment_id)
-        if not assignment:
-            return jsonify({'error': 'Assignment not found'}), 404
-        
-        if assignment.patient_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
-        
-        # Mark as completed
-        assignment.completed = True
-        assignment.completed_at = datetime.utcnow()
-        db.session.commit()
-        
-        log_audit(current_user_id, 'EXERCISE_ASSIGNMENT_COMPLETED', 'ExerciseVideoAssignment', assignment_id)
-        
-        return jsonify({
-            'message': 'Exercise marked as complete',
-            'completed_at': assignment.completed_at.isoformat()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
-
-# ============================================================================
-# HELPER ENDPOINT - Get Available Videos for Assignment
-# ============================================================================
-
-@app.route('/api/therapist/available-exercise-videos', methods=['GET'])
-@jwt_required()
-def get_available_exercise_videos():
-    """Get all analyzed videos that can be assigned as exercises"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Get videos with analysis (these are good examples to assign)
-        videos = Video.query.filter(
-            Video.is_deleted == False,
-            Video.analysis_results.isnot(None)
-        ).order_by(Video.uploaded_at.desc()).limit(100).all()
-        
-        result = []
-        for video in videos:
-            # Decrypt analysis
-            analysis = None
-            if video.analysis_results:
-                try:
-                    decrypted = decrypt_data(video.analysis_results)
-                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                except:
-                    pass
-            
-            if analysis:
-                result.append({
-                    'video_id': video.id,
-                    'filename': video.filename,
-                    'uploaded_at': video.uploaded_at.isoformat(),
-                    'exercise_type': analysis.get('exercise_type', 'unknown'),
-                    'total_reps': analysis.get('total_reps', 0),
-                    'form_score': analysis.get('average_accuracy', 0),
-                    'owner': video.owner.username
-                })
-        
-        return jsonify({'videos': result}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 # Utility functions
 def log_audit(user_id, action, resource_type=None, resource_id=None, details=None, success=True):
@@ -892,6 +528,289 @@ def analyze_video(video_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================================================
+# THERAPIST ENDPOINTS - Assign Exercise Videos
+# ============================================================================
+
+@app.route('/api/therapist/assign-exercise-video', methods=['POST'])
+@jwt_required()
+def assign_exercise_video():
+    """Therapist assigns a video to patient as exercise homework"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can assign exercises'}), 403
+        
+        data = request.get_json()
+        patient_id = data.get('patient_id')
+        video_id = data.get('video_id')
+        
+        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
+        if not patient_profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'This patient is not assigned to you'}), 403
+        
+        video = Video.query.get(video_id)
+        if not video or video.is_deleted:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        exercise_type = data.get('exercise_type')
+        if not exercise_type and video.analysis_results:
+            try:
+                decrypted = decrypt_data(video.analysis_results)
+                analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
+                exercise_type = analysis.get('exercise_type', 'unknown')
+            except:
+                exercise_type = 'unknown'
+        
+        assignment = ExerciseVideoAssignment(
+            patient_id=patient_id,
+            therapist_id=current_user_id,
+            video_id=video_id,
+            exercise_type=exercise_type,
+            target_reps=data.get('target_reps', 12),
+            target_sets=data.get('target_sets', 3),
+            frequency_per_week=data.get('frequency_per_week', 3),
+            instructions=data.get('instructions', ''),
+            due_date=datetime.strptime(data.get('due_date'), '%Y-%m-%d').date() if data.get('due_date') else None
+        )
+        
+        db.session.add(assignment)
+        db.session.commit()
+        
+        log_audit(current_user_id, 'EXERCISE_VIDEO_ASSIGNED', 'ExerciseVideoAssignment', 
+                 assignment.id, details=f"Assigned video {video_id} to patient {patient_id}")
+        
+        return jsonify({
+            'message': 'Exercise video assigned successfully',
+            'assignment_id': assignment.id,
+            'exercise_type': exercise_type,
+            'video_filename': video.filename
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error assigning exercise video: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/patients/<int:patient_id>/assigned-videos', methods=['GET'])
+@jwt_required()
+def get_patient_assigned_videos(patient_id):
+    """Get all videos assigned to a specific patient"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
+        if not patient_profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        assignments = ExerciseVideoAssignment.query.filter_by(
+            patient_id=patient_id,
+            is_active=True
+        ).order_by(ExerciseVideoAssignment.assigned_at.desc()).all()
+        
+        result = []
+        for assignment in assignments:
+            video = assignment.video
+            
+            analysis = None
+            if video.analysis_results:
+                try:
+                    decrypted = decrypt_data(video.analysis_results)
+                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
+                except:
+                    pass
+            
+            result.append({
+                'assignment_id': assignment.id,
+                'video_id': video.id,
+                'video_filename': video.filename,
+                'exercise_type': assignment.exercise_type,
+                'target_reps': assignment.target_reps,
+                'target_sets': assignment.target_sets,
+                'frequency_per_week': assignment.frequency_per_week,
+                'instructions': assignment.instructions,
+                'assigned_at': assignment.assigned_at.isoformat(),
+                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+                'completed': assignment.completed,
+                'completed_at': assignment.completed_at.isoformat() if assignment.completed_at else None,
+                'form_score': analysis.get('average_accuracy') if analysis else None
+            })
+        
+        return jsonify({'assignments': result}), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting patient assigned videos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/assigned-videos/<int:assignment_id>', methods=['DELETE'])
+@jwt_required()
+def remove_exercise_assignment(assignment_id):
+    """Therapist removes/deactivates an exercise assignment"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        assignment = ExerciseVideoAssignment.query.get(assignment_id)
+        if not assignment:
+            return jsonify({'error': 'Assignment not found'}), 404
+        
+        if user.role == 'clinician' and assignment.therapist_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        assignment.is_active = False
+        db.session.commit()
+        
+        log_audit(current_user_id, 'EXERCISE_ASSIGNMENT_REMOVED', 'ExerciseVideoAssignment', assignment_id)
+        
+        return jsonify({'message': 'Exercise assignment removed'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/patient/assigned-exercises', methods=['GET'])
+@jwt_required()
+def get_my_assigned_exercises():
+    """Patient gets their assigned exercise videos"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        assignments = ExerciseVideoAssignment.query.filter_by(
+            patient_id=current_user_id,
+            is_active=True
+        ).order_by(ExerciseVideoAssignment.assigned_at.desc()).all()
+        
+        result = []
+        for assignment in assignments:
+            video = assignment.video
+            
+            analysis = None
+            if video.analysis_results:
+                try:
+                    decrypted = decrypt_data(video.analysis_results)
+                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
+                except:
+                    pass
+            
+            completed_workout = WorkoutHistory.query.filter_by(
+                user_id=current_user_id,
+                video_id=video.id
+            ).order_by(WorkoutHistory.workout_date.desc()).first()
+            
+            result.append({
+                'assignment_id': assignment.id,
+                'video_id': video.id,
+                'video_filename': video.filename,
+                'exercise_type': assignment.exercise_type,
+                'target_reps': assignment.target_reps,
+                'target_sets': assignment.target_sets,
+                'frequency_per_week': assignment.frequency_per_week,
+                'instructions': assignment.instructions,
+                'assigned_at': assignment.assigned_at.isoformat(),
+                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+                'completed': assignment.completed,
+                'therapist_name': assignment.therapist.username,
+                'form_score_target': analysis.get('average_accuracy') if analysis else None,
+                'last_completed': completed_workout.workout_date.isoformat() if completed_workout else None,
+                'times_completed': WorkoutHistory.query.filter_by(
+                    user_id=current_user_id,
+                    video_id=video.id
+                ).count()
+            })
+        
+        return jsonify({'assigned_exercises': result}), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error getting assigned exercises: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/patient/assigned-exercises/<int:assignment_id>/complete', methods=['POST'])
+@jwt_required()
+def mark_assignment_complete(assignment_id):
+    """Patient marks an assigned exercise as complete"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        assignment = ExerciseVideoAssignment.query.get(assignment_id)
+        if not assignment:
+            return jsonify({'error': 'Assignment not found'}), 404
+        
+        if assignment.patient_id != current_user_id:
+            return jsonify({'error': 'Access denied'}), 403
+        
+        assignment.completed = True
+        assignment.completed_at = datetime.utcnow()
+        db.session.commit()
+        
+        log_audit(current_user_id, 'EXERCISE_ASSIGNMENT_COMPLETED', 'ExerciseVideoAssignment', assignment_id)
+        
+        return jsonify({
+            'message': 'Exercise marked as complete',
+            'completed_at': assignment.completed_at.isoformat()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/available-exercise-videos', methods=['GET'])
+@jwt_required()
+def get_available_exercise_videos():
+    """Get all analyzed videos that can be assigned as exercises"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        videos = Video.query.filter(
+            Video.is_deleted == False,
+            Video.analysis_results.isnot(None)
+        ).order_by(Video.uploaded_at.desc()).limit(100).all()
+        
+        result = []
+        for video in videos:
+            analysis = None
+            if video.analysis_results:
+                try:
+                    decrypted = decrypt_data(video.analysis_results)
+                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
+                except:
+                    pass
+            
+            if analysis:
+                result.append({
+                    'video_id': video.id,
+                    'filename': video.filename,
+                    'uploaded_at': video.uploaded_at.isoformat(),
+                    'exercise_type': analysis.get('exercise_type', 'unknown'),
+                    'total_reps': analysis.get('total_reps', 0),
+                    'form_score': analysis.get('average_accuracy', 0),
+                    'owner': video.owner.username
+                })
+        
+        return jsonify({'videos': result}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Continue with remaining endpoints...
 @app.route('/api/therapist/patients', methods=['POST'])
 @jwt_required()
 def create_patient():
@@ -1402,6 +1321,25 @@ def add_therapist_note():
         return jsonify({'message': 'Note added successfully', 'note_id': note.id}), 201
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/demos', methods=['GET'])
+def get_demo_videos():
+    try:
+        demos = DemoVideo.query.filter_by(is_active=True).all()
+        demo_list = [{
+            'id': d.id,
+            'exercise_type': d.exercise_type,
+            'title': d.title,
+            'description': d.description,
+            'video_url': d.video_url,
+            'thumbnail_url': d.thumbnail_url,
+            'duration_seconds': d.duration_seconds,
+            'difficulty_level': d.difficulty_level,
+            'target_muscles': d.target_muscles
+        } for d in demos]
+        return jsonify(demo_list), 200
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/demos/seed', methods=['POST'])
