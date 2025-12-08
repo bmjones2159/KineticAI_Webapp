@@ -739,6 +739,471 @@
         </div>
     </div>
 
+
+    <!-- 
+THERAPIST ASSIGN EXERCISE VIDEO MODAL
+Add this to therapist-patients.html after the patient file modal
+-->
+
+<style>
+/* Assignment Modal Styling */
+.assign-exercise-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 2000;
+    overflow-y: auto;
+}
+
+.assign-exercise-content {
+    background: white;
+    max-width: 700px;
+    margin: 50px auto;
+    border-radius: 12px;
+    padding: 30px;
+}
+
+.assign-exercise-content h2 {
+    margin-top: 0;
+    color: #2d3748;
+    border-bottom: 3px solid #805ad5;
+    padding-bottom: 15px;
+}
+
+.video-selection-grid {
+    display: grid;
+    gap: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 20px 0;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.video-option {
+    border: 2px solid #e2e8f0;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.video-option:hover {
+    border-color: #805ad5;
+    background: #f7fafc;
+}
+
+.video-option.selected {
+    border-color: #805ad5;
+    background: #f7f3ff;
+}
+
+.video-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.video-option-title {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.video-option-score {
+    background: #48bb78;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+}
+
+.video-option-details {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9em;
+    color: #718096;
+}
+
+.assignment-form {
+    display: grid;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.form-group-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.assigned-videos-list {
+    margin-top: 30px;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 20px;
+}
+
+.assigned-video-item {
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.assigned-video-info h4 {
+    margin: 0 0 8px 0;
+    color: #2d3748;
+}
+
+.assigned-video-info p {
+    margin: 4px 0;
+    color: #718096;
+    font-size: 0.9em;
+}
+
+.assignment-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.status-pending {
+    background: #fef5e7;
+    color: #d68910;
+}
+
+.status-completed {
+    background: #d5f4e6;
+    color: #0e6655;
+}
+
+.btn-remove-assignment {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.btn-remove-assignment:hover {
+    background: #c53030;
+}
+</style>
+
+<!-- Assignment Modal -->
+<div id="assignExerciseModal" class="assign-exercise-modal">
+    <div class="assign-exercise-content">
+        <h2>📋 Assign Exercise Video</h2>
+        <p style="color: #718096; margin-bottom: 20px;">Assign this video as exercise homework for <strong id="assignPatientName"></strong></p>
+        
+        <div class="assignment-form">
+            <!-- Video Selection -->
+            <div class="form-group">
+                <label style="font-weight: 600; color: #2d3748; margin-bottom: 8px; display: block;">
+                    Select Exercise Video
+                </label>
+                <div id="videoSelectionGrid" class="video-selection-grid">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            
+            <!-- Assignment Details -->
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label>Target Reps</label>
+                    <input type="number" id="assignTargetReps" value="12" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Target Sets</label>
+                    <input type="number" id="assignTargetSets" value="3" min="1" max="10">
+                </div>
+            </div>
+            
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label>Frequency per Week</label>
+                    <input type="number" id="assignFrequency" value="3" min="1" max="7">
+                </div>
+                <div class="form-group">
+                    <label>Due Date (Optional)</label>
+                    <input type="date" id="assignDueDate">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Instructions for Patient</label>
+                <textarea id="assignInstructions" rows="3" 
+                    placeholder="e.g., Focus on keeping your back straight and going to parallel depth..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Current Assignments -->
+        <div class="assigned-videos-list">
+            <h3 style="margin-top: 0; color: #2d3748;">Current Assignments</h3>
+            <div id="currentAssignmentsList">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button class="btn btn-primary" onclick="submitExerciseAssignment()">
+                ✓ Assign Exercise
+            </button>
+            <button class="btn" onclick="closeAssignExerciseModal()" 
+                style="background: #e2e8f0; color: #2d3748;">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedVideoForAssignment = null;
+let currentAssignmentPatientId = null;
+let availableVideos = [];
+
+// Open assignment modal
+function openAssignExerciseModal(patientId, patientName) {
+    currentAssignmentPatientId = patientId;
+    document.getElementById('assignPatientName').textContent = patientName;
+    document.getElementById('assignExerciseModal').style.display = 'block';
+    
+    // Load available videos
+    loadAvailableVideos();
+    
+    // Load current assignments
+    loadCurrentAssignments(patientId);
+}
+
+// Close modal
+function closeAssignExerciseModal() {
+    document.getElementById('assignExerciseModal').style.display = 'none';
+    selectedVideoForAssignment = null;
+    currentAssignmentPatientId = null;
+}
+
+// Load available exercise videos
+async function loadAvailableVideos() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/available-exercise-videos`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load videos');
+        
+        const data = await response.json();
+        availableVideos = data.videos;
+        displayAvailableVideos();
+        
+    } catch (error) {
+        console.error('Error loading videos:', error);
+        showMessage('Failed to load available videos', 'error');
+    }
+}
+
+// Display video options
+function displayAvailableVideos() {
+    const grid = document.getElementById('videoSelectionGrid');
+    
+    if (availableVideos.length === 0) {
+        grid.innerHTML = '<p style="text-align: center; color: #718096;">No analyzed videos available for assignment</p>';
+        return;
+    }
+    
+    grid.innerHTML = availableVideos.map(video => `
+        <div class="video-option ${selectedVideoForAssignment === video.video_id ? 'selected' : ''}" 
+            onclick="selectVideoForAssignment(${video.video_id})">
+            <div class="video-option-header">
+                <span class="video-option-title">${video.filename}</span>
+                <span class="video-option-score">${Math.round(video.form_score)}% Form</span>
+            </div>
+            <div class="video-option-details">
+                <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
+                <span>📊 ${video.total_reps} reps</span>
+                <span>👤 ${video.owner}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Select video for assignment
+function selectVideoForAssignment(videoId) {
+    selectedVideoForAssignment = videoId;
+    displayAvailableVideos();
+    
+    // Auto-fill details from video
+    const video = availableVideos.find(v => v.video_id === videoId);
+    if (video) {
+        document.getElementById('assignTargetReps').value = video.total_reps || 12;
+    }
+}
+
+// Submit assignment
+async function submitExerciseAssignment() {
+    if (!selectedVideoForAssignment) {
+        showMessage('Please select a video to assign', 'error');
+        return;
+    }
+    
+    const targetReps = parseInt(document.getElementById('assignTargetReps').value);
+    const targetSets = parseInt(document.getElementById('assignTargetSets').value);
+    const frequency = parseInt(document.getElementById('assignFrequency').value);
+    const dueDate = document.getElementById('assignDueDate').value;
+    const instructions = document.getElementById('assignInstructions').value;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/assign-exercise-video`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                patient_id: currentAssignmentPatientId,
+                video_id: selectedVideoForAssignment,
+                target_reps: targetReps,
+                target_sets: targetSets,
+                frequency_per_week: frequency,
+                due_date: dueDate || null,
+                instructions: instructions
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to assign exercise');
+        }
+        
+        const result = await response.json();
+        showMessage('✓ Exercise assigned successfully!', 'success');
+        
+        // Refresh assignments list
+        loadCurrentAssignments(currentAssignmentPatientId);
+        
+        // Clear form
+        selectedVideoForAssignment = null;
+        document.getElementById('assignTargetReps').value = 12;
+        document.getElementById('assignTargetSets').value = 3;
+        document.getElementById('assignFrequency').value = 3;
+        document.getElementById('assignDueDate').value = '';
+        document.getElementById('assignInstructions').value = '';
+        displayAvailableVideos();
+        
+    } catch (error) {
+        console.error('Error assigning exercise:', error);
+        showMessage(error.message, 'error');
+    }
+}
+
+// Load current assignments
+async function loadCurrentAssignments(patientId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}/assigned-videos`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load assignments');
+        
+        const data = await response.json();
+        displayCurrentAssignments(data.assignments);
+        
+    } catch (error) {
+        console.error('Error loading assignments:', error);
+    }
+}
+
+// Display current assignments
+function displayCurrentAssignments(assignments) {
+    const list = document.getElementById('currentAssignmentsList');
+    
+    if (assignments.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: #718096;">No assignments yet</p>';
+        return;
+    }
+    
+    list.innerHTML = assignments.map(assignment => `
+        <div class="assigned-video-item">
+            <div class="assigned-video-info">
+                <h4>${assignment.video_filename}</h4>
+                <p>
+                    <strong>${assignment.exercise_type.toUpperCase()}</strong> • 
+                    ${assignment.target_reps} reps × ${assignment.target_sets} sets • 
+                    ${assignment.frequency_per_week}x/week
+                </p>
+                ${assignment.instructions ? `<p>📝 ${assignment.instructions}</p>` : ''}
+                <p>
+                    <span class="assignment-status ${assignment.completed ? 'status-completed' : 'status-pending'}">
+                        ${assignment.completed ? '✓ Completed' : '⏳ Pending'}
+                    </span>
+                    ${assignment.due_date ? ` • Due: ${new Date(assignment.due_date).toLocaleDateString()}` : ''}
+                </p>
+            </div>
+            <button class="btn-remove-assignment" onclick="removeAssignment(${assignment.assignment_id})">
+                Remove
+            </button>
+        </div>
+    `).join('');
+}
+
+// Remove assignment
+async function removeAssignment(assignmentId) {
+    if (!confirm('Remove this exercise assignment?')) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/assigned-videos/${assignmentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to remove assignment');
+        
+        showMessage('Assignment removed', 'success');
+        loadCurrentAssignments(currentAssignmentPatientId);
+        
+    } catch (error) {
+        console.error('Error removing assignment:', error);
+        showMessage('Failed to remove assignment', 'error');
+    }
+}
+
+// Add button to patient file modal (add this to displayPatientReview function)
+// After the patient info section, add:
+function addAssignExerciseButton(patientId, patientName) {
+    return `
+        <div style="margin: 20px 0; text-align: center;">
+            <button class="btn btn-primary" onclick="openAssignExerciseModal(${patientId}, '${patientName}')">
+                📋 Assign Exercise Video
+            </button>
+        </div>
+    `;
+}
+
+// Update displayPatientReview to include assignment button
+// Find the patient info section and add the button after it
+</script>
     <!-- Patient Review Modal -->
     <div id="patientReviewModal" class="modal">
         <div class="modal-content">
