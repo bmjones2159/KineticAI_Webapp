@@ -392,6 +392,49 @@ def get_patient_assigned_videos(patient_id):
         return jsonify({'error': str(e)}), 500
 
 
+
+# ============================================================================
+# EXERCISE VIDEO ASSIGNMENT MODEL
+# ============================================================================
+# COPY THIS ENTIRE BLOCK and paste it in app.py after the DemoVideo model
+# (around line 300-400, right after class DemoVideo(db.Model):)
+# ============================================================================
+
+class ExerciseVideoAssignment(db.Model):
+    """Videos assigned by therapist to patient as exercise homework"""
+    __tablename__ = 'exercise_video_assignments'
+    
+    # Primary key
+    id = db.Column(db.Integer, primary_key=True)
+    
+    # Foreign keys
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    
+    # Exercise details
+    exercise_type = db.Column(db.String(50))  # 'squat', 'pushup', etc.
+    target_reps = db.Column(db.Integer)  # How many reps patient should do
+    target_sets = db.Column(db.Integer, default=3)  # How many sets
+    frequency_per_week = db.Column(db.Integer, default=3)  # Times per week
+    instructions = db.Column(db.Text)  # Custom instructions from therapist
+    
+    # Tracking fields
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    due_date = db.Column(db.Date)  # Optional deadline
+    is_active = db.Column(db.Boolean, default=True)  # For soft delete
+    completed = db.Column(db.Boolean, default=False)  # Patient marked complete
+    completed_at = db.Column(db.DateTime)  # When patient completed it
+    
+    # Relationships
+    patient = db.relationship('User', foreign_keys=[patient_id], backref='assigned_exercise_videos')
+    therapist = db.relationship('User', foreign_keys=[therapist_id], backref='exercise_assignments_created')
+    video = db.relationship('Video', backref='exercise_assignments')
+    
+    def __repr__(self):
+        return f'<ExerciseVideoAssignment {self.id}: Video {self.video_id} -> Patient {self.patient_id}>'
+
+
 @app.route('/api/therapist/assigned-videos/<int:assignment_id>', methods=['DELETE'])
 @jwt_required()
 def remove_exercise_assignment(assignment_id):
