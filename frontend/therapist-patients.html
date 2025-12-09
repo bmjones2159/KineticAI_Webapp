@@ -795,6 +795,44 @@
 .btn-remove-assignment:hover {
     background: #c53030;
 }
+
+/* Analysis Stats Display */
+.analysis-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
+
+.stat-card-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #10b981;
+    margin-bottom: 5px;
+}
+
+.stat-card-label {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.issue-tag {
+    display: inline-block;
+    background: white;
+    padding: 8px 12px;
+    margin: 5px;
+    border-radius: 5px;
+    color: #856404;
+}
     </style>
 </head>
 <body>
@@ -1450,18 +1488,22 @@ async function removeAssignment(assignmentId) {
                     </div>
 
                     <!-- AI Analysis Results -->
-                    <div class="ai-results-grid">
-                        <div class="ai-stat-box">
-                            <div class="ai-stat-value">${analysis.total_reps || 0}</div>
-                            <div class="ai-stat-label">Reps Detected (AI)</div>
+                    <div class="analysis-stats">
+                        <div class="stat-card">
+                            <div class="stat-card-value">${(analysis.exercise_type || 'Unknown').toUpperCase()}</div>
+                            <div class="stat-card-label">Exercise Type</div>
                         </div>
-                        <div class="ai-stat-box">
-                            <div class="ai-stat-value">${Math.round(analysis.average_accuracy || analysis.form_score || 0)}%</div>
-                            <div class="ai-stat-label">Form Score</div>
+                        <div class="stat-card">
+                            <div class="stat-card-value">${analysis.total_reps || 0}</div>
+                            <div class="stat-card-label">Reps Detected (AI)</div>
                         </div>
-                        <div class="ai-stat-box">
-                            <div class="ai-stat-value">${(analysis.exercise_type || 'Unknown').toUpperCase()}</div>
-                            <div class="ai-stat-label">Exercise Type</div>
+                        <div class="stat-card">
+                            <div class="stat-card-value">${Math.round(analysis.average_accuracy || analysis.form_score || 0)}%</div>
+                            <div class="stat-card-label">Form Score</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-value">${analysis.total_frames || 0}</div>
+                            <div class="stat-card-label">Frames Analyzed</div>
                         </div>
                     </div>
 
@@ -1513,12 +1555,18 @@ async function removeAssignment(assignmentId) {
                     <!-- Detected Issues -->
                     ${analysis.most_common_issues && analysis.most_common_issues.length > 0 ? `
                         <div class="issues-detected">
-                            <h4>Detected Issues:</h4>
-                            <ul>
-                                ${analysis.most_common_issues.map(issue => `<li>${issue}</li>`).join('')}
-                            </ul>
+                            <h4>⚠️ Form Issues Detected:</h4>
+                            <div style="margin-top: 10px;">
+                                ${analysis.most_common_issues.map(issue => 
+                                    `<span class="issue-tag">• ${issue}</span>`
+                                ).join('')}
+                            </div>
                         </div>
-                    ` : ''}
+                    ` : `
+                        <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="color: #065f46; margin: 0;">✅ <strong>Great form!</strong> No major issues detected by AI.</p>
+                        </div>
+                    `}
 
                     <!-- Assessment Form -->
                     <div class="assessment-form">
