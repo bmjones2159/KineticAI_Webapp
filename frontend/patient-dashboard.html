@@ -307,9 +307,6 @@
             color: #1e40af;
         }
 
-        /* ============================================ */
-        /* ASSIGNED EXERCISES WIDGET STYLES */
-        /* ============================================ */
         .assigned-exercises-section {
             background: white;
             border-radius: 15px;
@@ -439,6 +436,7 @@
             display: flex;
             gap: 10px;
             margin-top: 15px;
+            flex-wrap: wrap;
         }
 
         .btn-start-exercise {
@@ -522,7 +520,6 @@
     <div class="container">
         <div id="alert" class="alert"></div>
 
-        <!-- Stats Cards -->
         <div class="dashboard-grid">
             <div class="card">
                 <h3>📊 Progress Overview</h3>
@@ -559,7 +556,6 @@
             </div>
         </div>
 
-        <!-- ASSIGNED EXERCISES SECTION - NEW! -->
         <div class="assigned-exercises-section">
             <h2>
                 <span>📋</span>
@@ -573,7 +569,6 @@
             </div>
         </div>
 
-        <!-- Upload Video Section -->
         <div class="section">
             <div class="section-header">
                 <h2>📹 Upload New Exercise Video</h2>
@@ -605,14 +600,12 @@
             <div id="analysisResult" class="analysis-result" style="display: none;"></div>
         </div>
 
-        <!-- Exercise Library -->
         <div class="section">
             <div class="section-header">
                 <h2>💪 Exercise Library</h2>
             </div>
             
             <div class="exercise-list" id="exerciseLibrary">
-                <!-- Exercises will be loaded here -->
             </div>
         </div>
     </div>
@@ -622,7 +615,6 @@
         let currentUser = null;
         let selectedFile = null;
 
-        // Check authentication
         function checkAuth() {
             const token = localStorage.getItem('token');
             const user = localStorage.getItem('user');
@@ -635,7 +627,6 @@
             currentUser = JSON.parse(user);
             document.getElementById('userName').textContent = currentUser.username;
             
-            // Load dashboard data
             loadDashboardData();
         }
 
@@ -645,7 +636,6 @@
             window.location.href = 'index.html';
         }
 
-        // Load dashboard data
         async function loadDashboardData() {
             await Promise.all([
                 loadStats(),
@@ -655,26 +645,18 @@
         }
 
         async function loadStats() {
-            // TODO: Fetch real stats from API
             document.getElementById('totalSessions').textContent = '24';
             document.getElementById('thisWeek').textContent = '2';
         }
 
-        // ============================================
-        // LOAD ASSIGNED EXERCISES - NEW!
-        // ============================================
         async function loadAssignedExercises() {
             try {
                 const token = localStorage.getItem('token');
                 const response = await fetch(`${API_URL}/api/patient/assigned-exercises`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to load assigned exercises');
-                }
+                if (!response.ok) throw new Error('Failed to load assigned exercises');
                 
                 const data = await response.json();
                 displayAssignedExercises(data.assigned_exercises);
@@ -687,7 +669,6 @@
             }
         }
 
-        // Display assigned exercises
         function displayAssignedExercises(exercises) {
             const container = document.getElementById('assignedExercisesContainer');
             
@@ -755,7 +736,6 @@
                             </p>
                         ` : ''}
                         
-                        <!-- Weekly Progress -->
                         <div class="completion-progress">
                             <div class="completion-progress-bar" style="width: ${completionPercentage}%"></div>
                         </div>
@@ -766,8 +746,8 @@
                         
                         <div class="exercise-actions">
                             <button class="btn-start-exercise" 
-                                onclick="viewAssignedVideo(${exercise.video_id})">
-                                ▶ View Exercise Video
+                                onclick="viewAssignedExerciseVideo(${exercise.assignment_id}, ${exercise.video_id})">
+                                👁️ View Exercise Video
                             </button>
                             ${!exercise.completed ? `
                                 <button class="btn-mark-complete" 
@@ -781,38 +761,137 @@
             }).join('');
         }
 
-        // View assigned video
-        function viewAssignedVideo(videoId) {
-            window.location.href = `analysis-report.html?video_id=${videoId}`;
+        // ═══════════════════════════════════════════════════════════════
+        // VIEW ASSIGNED EXERCISE VIDEOS - NEW!
+        // ═══════════════════════════════════════════════════════════════
+
+        async function viewAssignedExerciseVideo(assignmentId, videoId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/videos/${videoId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load video');
+                const video = await response.json();
+                showExerciseVideoModal(video, assignmentId);
+                
+            } catch (error) {
+                console.error('Error loading assigned video:', error);
+                alert('Failed to load exercise video');
+            }
         }
 
-        // Mark assignment as complete
+        function showExerciseVideoModal(video, assignmentId = null) {
+            const analysis = video.analysis_results;
+            
+            const modalHtml = `
+                <div id="exerciseVideoModal" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; overflow-y: auto; padding: 20px;">
+                    <div style="background: white; max-width: 1000px; margin: 50px auto; border-radius: 15px; padding: 30px; box-shadow: 0 10px 50px rgba(0,0,0,0.3);">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;">
+                            <h2 style="color: #667eea; margin: 0;">📹 ${video.filename}</h2>
+                            <button onclick="closeExerciseVideoModal()" 
+                                style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666; padding: 0; width: 40px; height: 40px; transition: all 0.3s;"
+                                onmouseover="this.style.color='#333'; this.style.transform='scale(1.2)'"
+                                onmouseout="this.style.color='#666'; this.style.transform='scale(1)'">
+                                ×
+                            </button>
+                        </div>
+                        
+                        <div style="background: black; border-radius: 10px; overflow: hidden; margin: 20px 0;">
+                            <video controls style="width: 100%; display: block;">
+                                <source src="${API_URL}/api/videos/${video.id}/stream?token=${localStorage.getItem('token')}" type="video/mp4">
+                            </video>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${analysis?.total_reps || 0}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Total Reps</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${Math.round(analysis?.form_score || 0)}%</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Form Score</div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; margin-bottom: 5px;">${(analysis?.exercise_type || 'Unknown').toUpperCase()}</div>
+                                <div style="font-size: 0.9em; opacity: 0.9;">Exercise Type</div>
+                            </div>
+                        </div>
+                        
+                        ${analysis?.most_common_issues && analysis.most_common_issues.length > 0 ? `
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                <h4 style="color: #856404; margin: 0 0 15px 0; font-size: 1.1em;">⚠️ Form Tips:</h4>
+                                <ul style="list-style: none; padding: 0; margin: 0;">
+                                    ${analysis.most_common_issues.map(issue => `
+                                        <li style="padding: 10px; background: white; margin: 8px 0; border-radius: 5px; color: #856404;">
+                                            • ${issue}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="display: flex; gap: 15px; margin-top: 25px; justify-content: center; flex-wrap: wrap;">
+                            ${assignmentId ? `
+                                <button onclick="markAssignmentComplete(${assignmentId})" 
+                                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 15px 40px; border: none; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s;"
+                                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(16,185,129,0.4)'"
+                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                    ✓ Mark Complete
+                                </button>
+                            ` : ''}
+                            <button onclick="closeExerciseVideoModal()" 
+                                style="background: #6c757d; color: white; padding: 15px 40px; border: none; border-radius: 10px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: all 0.3s;"
+                                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(108,117,125,0.4)'"
+                                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const existingModal = document.getElementById('exerciseVideoModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeExerciseVideoModal() {
+            const modal = document.getElementById('exerciseVideoModal');
+            if (modal) {
+                modal.style.display = 'none';
+                setTimeout(() => modal.remove(), 300);
+            }
+        }
+
         async function markAssignmentComplete(assignmentId) {
-            if (!confirm('Mark this exercise as complete?')) return;
+            if (!confirm('Mark this exercise assignment as complete?')) return;
             
             try {
                 const token = localStorage.getItem('token');
                 const response = await fetch(`${API_URL}/api/patient/assigned-exercises/${assignmentId}/complete`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error('Failed to mark as complete');
-                }
+                if (!response.ok) throw new Error('Failed to mark complete');
                 
-                showAlert('✓ Exercise marked as complete!', 'success');
-                loadAssignedExercises(); // Reload
+                showAlert('✓ Assignment marked as complete!', 'success');
+                closeExerciseVideoModal();
+                loadAssignedExercises();
                 
             } catch (error) {
                 console.error('Error marking complete:', error);
-                showAlert('Failed to mark as complete', 'error');
+                showAlert('Failed to mark assignment complete.', 'error');
             }
         }
 
-        // Load exercise library (demo videos)
         async function loadExerciseLibrary() {
             try {
                 const response = await fetch(`${API_URL}/api/demos`);
@@ -866,7 +945,6 @@
             window.location.href = `exercise-detail.html?type=${exerciseType}`;
         }
 
-        // File upload handling
         const uploadArea = document.getElementById('uploadArea');
         const videoFile = document.getElementById('videoFile');
 
@@ -1018,7 +1096,6 @@
             }, 5000);
         }
 
-        // Initialize
         checkAuth();
     </script>
 </body>
