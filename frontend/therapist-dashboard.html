@@ -1184,6 +1184,465 @@
             }, 5000);
         }
 
+/* ═══════════════════════════════════════════════════════════════════
+   THERAPIST DASHBOARD - VIEW PATIENT WORKOUT COMPLETIONS
+   Add to therapist-patients-COMPLETE.html
+   ═══════════════════════════════════════════════════════════════════ */
+
+// ============================================
+// STEP 1: Add CSS Styles
+// ============================================
+
+// Add to <style> section:
+
+.completion-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s;
+}
+
+.completion-card:hover {
+    border-color: #10b981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.completion-card.reviewed {
+    border-color: #10b981;
+    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+}
+
+.completion-card.pending {
+    border-color: #fbbf24;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+}
+
+.stat-box.good {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+.stat-box.warning {
+    border-color: #fbbf24;
+    background: #fef3c7;
+}
+
+.video-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.video-side {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.review-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    z-index: 10000;
+    overflow-y: auto;
+}
+
+.review-modal-content {
+    background: white;
+    max-width: 1200px;
+    margin: 50px auto;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+}
+
+
+// ============================================
+// STEP 2: Update displayPatientReview() to show completions
+// ============================================
+
+// In displayPatientReview() function, ADD this section after workout progress:
+
+async function displayPatientReview(patientId) {
+    // ... existing code ...
+    
+    // ADD THIS NEW SECTION after progress container:
+    
+    <!-- Workout Completions Section -->
+    <div class="patient-info-section">
+        <h3>📊 Completed Workouts & Results</h3>
+        <div id="completionsContainer_${patientId}">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading workout completions...</p>
+            </div>
+        </div>
+    </div>
+    
+    // ... rest of existing code ...
+    
+    // Then call the load function:
+    loadPatientCompletions(patientId);
+}
+
+
+// ============================================
+// STEP 3: Add JavaScript Functions
+// ============================================
+
+// Load patient completions
+async function loadPatientCompletions(patientId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/patient/${patientId}/completions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load completions');
+        
+        const data = await response.json();
+        displayPatientCompletions(patientId, data.completions);
+        
+    } catch (error) {
+        console.error('Error loading completions:', error);
+        document.getElementById(`completionsContainer_${patientId}`).innerHTML = `
+            <p style="text-align: center; color: #e53e3e;">Failed to load workout completions</p>
+        `;
+    }
+}
+
+// Display patient completions
+function displayPatientCompletions(patientId, completions) {
+    const container = document.getElementById(`completionsContainer_${patientId}`);
+    
+    if (!completions || completions.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: #666;">
+                <div style="font-size: 2.5em; margin-bottom: 10px;">📭</div>
+                <p>No completed workouts yet</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = completions.map(completion => {
+        const isGoodPerformance = completion.reps_vs_target >= 0 && completion.patient_form_score >= 70;
+        const needsImprovement = completion.patient_form_score < 60 || completion.reps_vs_target < -3;
+        
+        return `
+            <div class="completion-card ${completion.therapist_reviewed ? 'reviewed' : 'pending'}">
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <div>
+                        <h4 style="margin: 0 0 5px 0; color: #333;">${completion.exercise_name}</h4>
+                        <p style="color: #666; font-size: 0.9em; margin: 0;">
+                            📅 ${new Date(completion.completed_at).toLocaleDateString()} at ${new Date(completion.completed_at).toLocaleTimeString()}
+                        </p>
+                    </div>
+                    <span style="background: ${completion.therapist_reviewed ? '#d1fae5' : '#fef3c7'}; color: ${completion.therapist_reviewed ? '#065f46' : '#92400e'}; padding: 5px 15px; border-radius: 20px; font-size: 0.85em; font-weight: 600;">
+                        ${completion.therapist_reviewed ? '✓ Reviewed' : '⏳ Needs Review'}
+                    </span>
+                </div>
+                
+                <!-- Performance Stats -->
+                <div class="comparison-grid">
+                    <div class="stat-box ${completion.reps_vs_target >= 0 ? 'good' : 'warning'}">
+                        <div style="font-size: 1.8em; font-weight: bold; color: #333;">${completion.patient_reps}</div>
+                        <div style="font-size: 0.85em; color: #666;">Reps Completed</div>
+                        <div style="font-size: 0.8em; margin-top: 3px; color: #999;">Target: ${completion.target_reps}</div>
+                    </div>
+                    <div class="stat-box ${completion.patient_form_score >= 70 ? 'good' : 'warning'}">
+                        <div style="font-size: 1.8em; font-weight: bold; color: #333;">${Math.round(completion.patient_form_score)}%</div>
+                        <div style="font-size: 0.85em; color: #666;">Form Score</div>
+                        ${completion.target_form_score ? `<div style="font-size: 0.8em; margin-top: 3px; color: #999;">Target: ${Math.round(completion.target_form_score)}%</div>` : ''}
+                    </div>
+                    <div class="stat-box ${completion.reps_vs_target >= 0 ? 'good' : 'warning'}">
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${completion.reps_vs_target >= 0 ? '#10b981' : '#f59e0b'};">
+                            ${completion.reps_vs_target >= 0 ? '+' : ''}${completion.reps_vs_target}
+                        </div>
+                        <div style="font-size: 0.85em; color: #666;">vs Target</div>
+                    </div>
+                    <div class="stat-box">
+                        <div style="font-size: 1.8em; font-weight: bold; color: #333;">${completion.target_sets}</div>
+                        <div style="font-size: 0.85em; color: #666;">Target Sets</div>
+                    </div>
+                </div>
+                
+                <!-- Form Issues -->
+                ${completion.patient_issues && completion.patient_issues.length > 0 ? `
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; border-radius: 8px; margin: 15px 0;">
+                        <strong style="color: #856404;">⚠️ Form Issues Detected:</strong>
+                        <ul style="margin: 8px 0 0 20px; color: #856404;">
+                            ${completion.patient_issues.map(issue => `<li style="margin: 3px 0;">${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : `
+                    <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 12px 15px; border-radius: 8px; margin: 15px 0;">
+                        <p style="color: #065f46; margin: 0;">✅ <strong>Good form!</strong> No major issues detected.</p>
+                    </div>
+                `}
+                
+                <!-- Therapist Review -->
+                ${completion.therapist_notes ? `
+                    <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px 15px; border-radius: 8px; margin: 15px 0;">
+                        <strong style="color: #1976d2;">💬 Your Feedback:</strong>
+                        <p style="margin: 8px 0 0 0; color: #555;">${completion.therapist_notes}</p>
+                        ${completion.reviewed_at ? `
+                            <p style="margin: 8px 0 0 0; font-size: 0.85em; color: #999;">
+                                Reviewed: ${new Date(completion.reviewed_at).toLocaleDateString()}
+                            </p>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="viewCompletionWithVideos(${completion.id})">
+                        🎬 Compare Videos
+                    </button>
+                    ${!completion.therapist_reviewed ? `
+                        <button class="btn" onclick="openReviewModal(${completion.id})" 
+                            style="background: #10b981; color: white;">
+                            ✍️ Add Review
+                        </button>
+                    ` : `
+                        <button class="btn" onclick="openReviewModal(${completion.id})" 
+                            style="background: #6c757d; color: white;">
+                            ✏️ Edit Review
+                        </button>
+                    `}
+                    <button class="btn btn-secondary" onclick="downloadCompletionReport(${completion.id})">
+                        📄 Export Report
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// View completion with video comparison
+async function viewCompletionWithVideos(completionId) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/completions/${completionId}/details`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load completion details');
+        
+        const data = await response.json();
+        showVideoComparisonModal(data.completion);
+        
+    } catch (error) {
+        console.error('Error loading completion details:', error);
+        alert('Failed to load completion details');
+    }
+}
+
+// Show video comparison modal
+function showVideoComparisonModal(completion) {
+    const modalHtml = `
+        <div id="videoComparisonModal" style="display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; overflow-y: auto; padding: 20px;">
+            <div style="background: white; max-width: 1400px; margin: 50px auto; border-radius: 15px; padding: 30px;">
+                
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;">
+                    <h2 style="color: #10b981; margin: 0;">🎬 Video Comparison</h2>
+                    <button onclick="closeVideoComparisonModal()" 
+                        style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666;">
+                        ×
+                    </button>
+                </div>
+                
+                <!-- Videos Side by Side -->
+                <div class="video-comparison">
+                    <!-- Reference Video -->
+                    <div class="video-side">
+                        <h3 style="color: #667eea; margin: 0 0 15px 0;">📹 Reference Video</h3>
+                        <video controls style="width: 100%; border-radius: 8px;">
+                            <source src="${API_URL}/api/videos/${completion.reference_video.id}/stream?token=${localStorage.getItem('token')}" type="video/mp4">
+                        </video>
+                        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin: 0 0 10px 0; color: #333;">Reference Stats:</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>
+                                    <strong>Reps:</strong> ${completion.reference_video.analysis?.total_reps || 'N/A'}
+                                </div>
+                                <div>
+                                    <strong>Form Score:</strong> ${Math.round(completion.reference_video.analysis?.form_score || 0)}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Patient Video -->
+                    <div class="video-side">
+                        <h3 style="color: #10b981; margin: 0 0 15px 0;">👤 Patient's Video</h3>
+                        ${completion.patient_video ? `
+                            <video controls style="width: 100%; border-radius: 8px;">
+                                <source src="${API_URL}/api/videos/${completion.patient_video.id}/stream?token=${localStorage.getItem('token')}" type="video/mp4">
+                            </video>
+                            <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                                <h4 style="margin: 0 0 10px 0; color: #333;">Patient's Performance:</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <strong>Reps:</strong> ${completion.patient_video.analysis?.total_reps || 0}
+                                    </div>
+                                    <div>
+                                        <strong>Form Score:</strong> ${Math.round(completion.patient_video.analysis?.form_score || 0)}%
+                                    </div>
+                                </div>
+                                ${completion.patient_video.analysis?.most_common_issues?.length > 0 ? `
+                                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                                        <strong>Issues:</strong>
+                                        <ul style="margin: 5px 0 0 20px; font-size: 0.9em;">
+                                            ${completion.patient_video.analysis.most_common_issues.map(issue => `<li>${issue}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : `
+                            <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
+                                <p style="color: #666;">No video uploaded</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+                
+                <!-- Comparison Summary -->
+                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 20px; border-radius: 12px; margin: 25px 0;">
+                    <h3 style="color: #1976d2; margin: 0 0 15px 0;">📊 Performance Comparison</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: ${completion.comparison.reps_vs_target >= 0 ? '#10b981' : '#f59e0b'};">
+                                ${completion.comparison.reps_vs_target >= 0 ? '+' : ''}${completion.comparison.reps_vs_target}
+                            </div>
+                            <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Reps vs Target</div>
+                        </div>
+                        <div style="background: white; padding: 15px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 1.8em; font-weight: bold; color: ${completion.comparison.form_score_vs_target >= 0 ? '#10b981' : '#f59e0b'};">
+                                ${completion.comparison.form_score_vs_target >= 0 ? '+' : ''}${Math.round(completion.comparison.form_score_vs_target)}%
+                            </div>
+                            <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Form Score Difference</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Close Button -->
+                <div style="text-align: center; margin-top: 25px;">
+                    <button class="btn btn-primary" onclick="closeVideoComparisonModal()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeVideoComparisonModal() {
+    const modal = document.getElementById('videoComparisonModal');
+    if (modal) modal.remove();
+}
+
+// Open review modal
+function openReviewModal(completionId) {
+    const modalHtml = `
+        <div id="reviewModal" class="review-modal" style="display: block;">
+            <div class="review-modal-content" style="max-width: 600px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;">
+                    <h2 style="color: #10b981; margin: 0;">✍️ Add Review Feedback</h2>
+                    <button onclick="closeReviewModal()" 
+                        style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666;">
+                        ×
+                    </button>
+                </div>
+                
+                <textarea id="reviewNotes" placeholder="Add your feedback for the patient..." 
+                    style="width: 100%; min-height: 150px; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: inherit; font-size: 1em; resize: vertical;"></textarea>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-primary" onclick="submitReview(${completionId})">
+                        Submit Review
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeReviewModal()" style="margin-left: 10px;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('reviewModal');
+    if (modal) modal.remove();
+}
+
+async function submitReview(completionId) {
+    const notes = document.getElementById('reviewNotes').value.trim();
+    
+    if (!notes) {
+        alert('Please enter some feedback');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/api/therapist/completions/${completionId}/review`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ notes })
+        });
+        
+        if (!response.ok) throw new Error('Failed to submit review');
+        
+        alert('✓ Review submitted successfully!');
+        closeReviewModal();
+        
+        // Reload the patient's completions
+        const patientId = getCurrentPatientId(); // You'll need to track this
+        loadPatientCompletions(patientId);
+        
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        alert('Failed to submit review');
+    }
+}
+
+function downloadCompletionReport(completionId) {
+    alert('Export feature coming soon!');
+    // TODO: Implement PDF export
+}
+        
         // Initialize
         checkAuth();
     </script>
