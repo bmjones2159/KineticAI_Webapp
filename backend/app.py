@@ -1411,5 +1411,482 @@ with app.app_context():
         except Exception as e:
             print(f"Auto-init error: {e}")
 
+# ═══════════════════════════════════════════════════════════════════
+# WORKOUT COMPLETION TRACKING - BACKEND ADDITIONS
+# Add these to app.py (backend/app.py)
+# ═══════════════════════════════════════════════════════════════════
+
+# ============================================
+# NEW DATABASE MODEL - Add after ExerciseVideoAssignment model
+# ============================================
+
+class WorkoutCompletion(db.Model):
+    """Track when patients complete assigned exercises with their video"""
+    __tablename__ = 'workout_completions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey('exercise_video_assignments.id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Patient's uploaded video
+    patient_video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=True)  # Their attempt
+    
+    # Reference video (what they were assigned)
+    reference_video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    
+    # Completion data
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Patient's performance results (from their uploaded video)
+    patient_reps = db.Column(db.Integer)
+    patient_form_score = db.Column(db.Float)
+    patient_exercise_type = db.Column(db.String(50))
+    patient_issues = db.Column(db.JSON)  # List of form issues detected
+    
+    # Comparison to reference
+    reps_vs_target = db.Column(db.Integer)  # How close to target reps
+    form_score_vs_target = db.Column(db.Float)  # Score difference
+    
+    # Therapist feedback
+    therapist_notes = db.Column(db.Text)
+    therapist_reviewed = db.Column(db.Boolean, default=False)
+    reviewed_at = db.Column(db.DateTime)
+    
+    # Relationships
+    assignment = db.relationship('ExerciseVideoAssignment', backref='completions')
+    patient = db.relationship('User', foreign_keys=[patient_id], backref='workout_completions')
+    therapist = db.relationship('User', foreign_keys=[therapist_id], backref='reviewed_workouts')
+    patient_video = db.relationship('Video', foreign_keys=[patient_video_id])
+    reference_video = db.relationship('Video', foreign_keys=[reference_video_id])
+
+
+# ============================================
+# ENDPOINT 1: Patient uploads video for assignment
+# ============================================
+
+@app.route('/api/patient/assignments/<int:assignment_id>/submit-workout', methods=['POST'])
+@jwt_required()
+def submit_workout_for_assignment(assignment_id):
+    """
+    Patient uploads their workout video to complete an assignment
+    Returns comparison with reference video
+    """
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if user.role != 'patient':
+            return jsonify({'error': 'Only patients can submit workouts'}), 403
+        
+        # Get the assignment
+        assignment = ExerciseVideoAssignment.query.get(assignment_id)
+        if not assignment:
+            return jsonify({'error': 'Assignment not found'}), 404
+        
+        if assignment.patient_id != user_id:
+            return jsonify({'error': 'Not your assignment'}), 403
+        
+        # Get the uploaded video file
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        if video_file.filename == '':
+            return jsonify({'error': 'No video selected'}), 400
+        
+        # Save the patient's video
+        filename = secure_filename(f"patient_{user_id}_{assignment_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{video_file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        video_file.save(filepath)
+        
+        # Create video record
+        patient_video = Video(
+            filename=filename,
+            filepath=filepath,
+            user_id=user_id,
+            uploaded_at=datetime.utcnow()
+        )
+        db.session.add(patient_video)
+        db.session.flush()  # Get the video ID
+        
+        # Analyze the patient's video
+        try:
+            analysis_results = analyze_video_with_yolo(filepath)
+            patient_video.analysis_results = analysis_results
+            patient_video.analyzed_at = datetime.utcnow()
+        except Exception as e:
+            logger.error(f"Analysis failed: {str(e)}")
+            analysis_results = None
+        
+        # Get reference video for comparison
+        reference_video = Video.query.get(assignment.video_id)
+        
+        # Calculate comparison metrics
+        reps_vs_target = None
+        form_score_vs_target = None
+        
+        if analysis_results and reference_video.analysis_results:
+            patient_reps = analysis_results.get('total_reps', 0)
+            target_reps = assignment.target_reps
+            reps_vs_target = patient_reps - target_reps
+            
+            patient_form_score = analysis_results.get('form_score', 0)
+            reference_form_score = reference_video.analysis_results.get('form_score', 0)
+            form_score_vs_target = patient_form_score - reference_form_score
+        
+        # Create workout completion record
+        completion = WorkoutCompletion(
+            assignment_id=assignment_id,
+            patient_id=user_id,
+            therapist_id=assignment.assigned_by,
+            patient_video_id=patient_video.id,
+            reference_video_id=assignment.video_id,
+            completed_at=datetime.utcnow(),
+            patient_reps=analysis_results.get('total_reps') if analysis_results else None,
+            patient_form_score=analysis_results.get('form_score') if analysis_results else None,
+            patient_exercise_type=analysis_results.get('exercise_type') if analysis_results else None,
+            patient_issues=analysis_results.get('most_common_issues', []) if analysis_results else [],
+            reps_vs_target=reps_vs_target,
+            form_score_vs_target=form_score_vs_target
+        )
+        db.session.add(completion)
+        
+        # Update assignment status
+        assignment.completed = True
+        assignment.completed_at = datetime.utcnow()
+        assignment.times_completed += 1
+        assignment.last_completed = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Workout submitted successfully!',
+            'completion_id': completion.id,
+            'patient_video_id': patient_video.id,
+            'analysis_results': analysis_results,
+            'comparison': {
+                'reps_achieved': analysis_results.get('total_reps') if analysis_results else 0,
+                'reps_target': assignment.target_reps,
+                'reps_difference': reps_vs_target,
+                'form_score': analysis_results.get('form_score') if analysis_results else 0,
+                'form_score_vs_reference': form_score_vs_target
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error submitting workout: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# ENDPOINT 2: Get patient's workout completions
+# ============================================
+
+@app.route('/api/patient/workout-completions', methods=['GET'])
+@jwt_required()
+def get_patient_workout_completions():
+    """Get all workout completions for the logged-in patient"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if user.role != 'patient':
+            return jsonify({'error': 'Only patients can view this'}), 403
+        
+        completions = WorkoutCompletion.query.filter_by(patient_id=user_id)\
+            .order_by(WorkoutCompletion.completed_at.desc())\
+            .all()
+        
+        results = []
+        for completion in completions:
+            assignment = completion.assignment
+            reference_video = completion.reference_video
+            
+            results.append({
+                'id': completion.id,
+                'assignment_id': completion.assignment_id,
+                'completed_at': completion.completed_at.isoformat(),
+                'exercise_name': reference_video.filename,
+                'exercise_type': completion.patient_exercise_type,
+                
+                # Patient's results
+                'patient_reps': completion.patient_reps,
+                'patient_form_score': round(completion.patient_form_score, 2) if completion.patient_form_score else 0,
+                'patient_issues': completion.patient_issues,
+                'patient_video_id': completion.patient_video_id,
+                
+                # Target/Reference
+                'target_reps': assignment.target_reps,
+                'target_sets': assignment.target_sets,
+                
+                # Comparison
+                'reps_vs_target': completion.reps_vs_target,
+                'form_score_vs_target': round(completion.form_score_vs_target, 2) if completion.form_score_vs_target else 0,
+                
+                # Therapist feedback
+                'therapist_reviewed': completion.therapist_reviewed,
+                'therapist_notes': completion.therapist_notes,
+                'reviewed_at': completion.reviewed_at.isoformat() if completion.reviewed_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'completions': results,
+            'total': len(results)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching workout completions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# ENDPOINT 3: Therapist views patient completions
+# ============================================
+
+@app.route('/api/therapist/patient/<int:patient_id>/completions', methods=['GET'])
+@jwt_required()
+def get_patient_completions_for_therapist(patient_id):
+    """Therapist views all workout completions for a specific patient"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if user.role != 'therapist':
+            return jsonify({'error': 'Only therapists can view this'}), 403
+        
+        # Verify patient exists
+        patient = User.query.get(patient_id)
+        if not patient or patient.role != 'patient':
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Get all completions for this patient assigned by this therapist
+        completions = WorkoutCompletion.query.filter_by(
+            patient_id=patient_id,
+            therapist_id=user_id
+        ).order_by(WorkoutCompletion.completed_at.desc()).all()
+        
+        results = []
+        for completion in completions:
+            assignment = completion.assignment
+            reference_video = completion.reference_video
+            
+            results.append({
+                'id': completion.id,
+                'assignment_id': completion.assignment_id,
+                'completed_at': completion.completed_at.isoformat(),
+                'exercise_name': reference_video.filename,
+                'exercise_type': completion.patient_exercise_type,
+                
+                # Patient's performance
+                'patient_reps': completion.patient_reps,
+                'patient_form_score': round(completion.patient_form_score, 2) if completion.patient_form_score else 0,
+                'patient_issues': completion.patient_issues,
+                'patient_video_id': completion.patient_video_id,
+                
+                # Reference/Target
+                'reference_video_id': completion.reference_video_id,
+                'target_reps': assignment.target_reps,
+                'target_sets': assignment.target_sets,
+                'target_form_score': assignment.form_score_target,
+                
+                # Comparison
+                'reps_vs_target': completion.reps_vs_target,
+                'form_score_vs_target': round(completion.form_score_vs_target, 2) if completion.form_score_vs_target else 0,
+                
+                # Review status
+                'therapist_reviewed': completion.therapist_reviewed,
+                'therapist_notes': completion.therapist_notes,
+                'reviewed_at': completion.reviewed_at.isoformat() if completion.reviewed_at else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'patient_name': patient.full_name or patient.username,
+            'completions': results,
+            'total': len(results)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching patient completions: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# ENDPOINT 4: Therapist adds review notes
+# ============================================
+
+@app.route('/api/therapist/completions/<int:completion_id>/review', methods=['POST'])
+@jwt_required()
+def review_workout_completion(completion_id):
+    """Therapist adds review notes to a workout completion"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if user.role != 'therapist':
+            return jsonify({'error': 'Only therapists can review workouts'}), 403
+        
+        completion = WorkoutCompletion.query.get(completion_id)
+        if not completion:
+            return jsonify({'error': 'Completion not found'}), 404
+        
+        if completion.therapist_id != user_id:
+            return jsonify({'error': 'Not authorized to review this workout'}), 403
+        
+        data = request.get_json()
+        notes = data.get('notes', '')
+        
+        completion.therapist_notes = notes
+        completion.therapist_reviewed = True
+        completion.reviewed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Review added successfully',
+            'completion_id': completion_id,
+            'reviewed_at': completion.reviewed_at.isoformat()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error reviewing workout: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# ENDPOINT 5: Get completion details (both videos)
+# ============================================
+
+@app.route('/api/completions/<int:completion_id>/details', methods=['GET'])
+@jwt_required()
+def get_completion_details(completion_id):
+    """Get full details of a workout completion including both videos"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        completion = WorkoutCompletion.query.get(completion_id)
+        if not completion:
+            return jsonify({'error': 'Completion not found'}), 404
+        
+        # Check authorization
+        if user.role == 'patient' and completion.patient_id != user_id:
+            return jsonify({'error': 'Not authorized'}), 403
+        elif user.role == 'therapist' and completion.therapist_id != user_id:
+            return jsonify({'error': 'Not authorized'}), 403
+        
+        assignment = completion.assignment
+        reference_video = completion.reference_video
+        patient_video = completion.patient_video
+        
+        return jsonify({
+            'success': True,
+            'completion': {
+                'id': completion.id,
+                'completed_at': completion.completed_at.isoformat(),
+                
+                # Reference video (what they should do)
+                'reference_video': {
+                    'id': reference_video.id,
+                    'filename': reference_video.filename,
+                    'analysis': reference_video.analysis_results
+                },
+                
+                # Patient video (what they did)
+                'patient_video': {
+                    'id': patient_video.id if patient_video else None,
+                    'filename': patient_video.filename if patient_video else None,
+                    'analysis': {
+                        'total_reps': completion.patient_reps,
+                        'form_score': completion.patient_form_score,
+                        'exercise_type': completion.patient_exercise_type,
+                        'most_common_issues': completion.patient_issues
+                    }
+                },
+                
+                # Assignment details
+                'assignment': {
+                    'target_reps': assignment.target_reps,
+                    'target_sets': assignment.target_sets,
+                    'frequency_per_week': assignment.frequency_per_week,
+                    'instructions': assignment.instructions
+                },
+                
+                # Comparison
+                'comparison': {
+                    'reps_vs_target': completion.reps_vs_target,
+                    'form_score_vs_target': completion.form_score_vs_target
+                },
+                
+                # Review
+                'therapist_reviewed': completion.therapist_reviewed,
+                'therapist_notes': completion.therapist_notes,
+                'reviewed_at': completion.reviewed_at.isoformat() if completion.reviewed_at else None
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching completion details: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================
+# HELPER: Update patient progress stats
+# ============================================
+
+@app.route('/api/patient/progress-summary', methods=['GET'])
+@jwt_required()
+def get_patient_progress_summary():
+    """Get patient's workout progress summary"""
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if user.role != 'patient':
+            return jsonify({'error': 'Only patients can view this'}), 403
+        
+        # Get completion stats
+        total_completions = WorkoutCompletion.query.filter_by(patient_id=user_id).count()
+        
+        # This week
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        this_week = WorkoutCompletion.query.filter(
+            WorkoutCompletion.patient_id == user_id,
+            WorkoutCompletion.completed_at >= week_ago
+        ).count()
+        
+        # Average form score
+        completions = WorkoutCompletion.query.filter_by(patient_id=user_id).all()
+        avg_form_score = 0
+        if completions:
+            scores = [c.patient_form_score for c in completions if c.patient_form_score]
+            avg_form_score = sum(scores) / len(scores) if scores else 0
+        
+        # Active assignments
+        active_assignments = ExerciseVideoAssignment.query.filter_by(
+            patient_id=user_id,
+            completed=False
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_completions': total_completions,
+                'completions_this_week': this_week,
+                'average_form_score': round(avg_form_score, 2),
+                'active_assignments': active_assignments
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching progress summary: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
