@@ -1186,58 +1186,6 @@ def get_my_workout_history():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/therapist/patients/<int:patient_id>/workouts', methods=['GET'])
-@jwt_required()
-def get_patient_workouts(patient_id):
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
-        if not patient_profile:
-            return jsonify({'error': 'Patient not found'}), 404
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
-        
-        limit = request.args.get('limit', 100, type=int)
-        workouts = WorkoutHistory.query.filter_by(user_id=patient_id).order_by(WorkoutHistory.workout_date.desc()).limit(limit).all()
-        
-        workout_list = [{
-            'id': w.id,
-            'exercise_type': w.exercise_type,
-            'total_reps': w.total_reps,
-            'sets_completed': w.sets_completed,
-            'duration_minutes': w.duration_minutes,
-            'form_score': w.avg_form_score,
-            'notes': w.patient_notes,
-            'completed_at': w.workout_date.isoformat(),
-            'video_id': w.video_id
-        } for w in workouts]
-        
-        total_workouts = len(workout_list)
-        scores = [w['form_score'] for w in workout_list if w['form_score']]
-        avg_form_score = sum(scores) / len(scores) if scores else 0
-        
-        exercise_counts = {}
-        for w in workout_list:
-            if w['exercise_type']:
-                exercise_counts[w['exercise_type']] = exercise_counts.get(w['exercise_type'], 0) + 1
-        
-        return jsonify({
-            'workouts': workout_list,
-            'summary': {
-                'total_workouts': total_workouts,
-                'avg_form_score': round(avg_form_score, 1),
-                'exercise_breakdown': exercise_counts,
-                'last_workout': workout_list[0]['completed_at'] if workout_list else None
-            }
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/therapist/notes', methods=['POST'])
 @jwt_required()
 def add_therapist_note():
