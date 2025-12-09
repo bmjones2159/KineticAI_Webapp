@@ -897,7 +897,16 @@
 <!-- Assignment Modal -->
 <div id="assignExerciseModal" class="assign-exercise-modal">
     <div class="assign-exercise-content">
-        <h2>📋 Assign Exercise Video</h2>
+        <!-- Header with Close Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #805ad5;">
+            <h2 style="margin: 0;">📋 Assign Exercise Video</h2>
+            <button onclick="closeAssignExerciseModal()" 
+                style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666; padding: 0; width: 40px; height: 40px; transition: all 0.3s;"
+                onmouseover="this.style.color='#333'; this.style.transform='scale(1.2)'"
+                onmouseout="this.style.color='#666'; this.style.transform='scale(1)'">
+                ×
+            </button>
+        </div>
         <p style="color: #718096; margin-bottom: 20px;">Assign this video as exercise homework for <strong id="assignPatientName"></strong></p>
         
         <div class="assignment-form">
