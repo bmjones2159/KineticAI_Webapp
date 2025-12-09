@@ -1238,63 +1238,6 @@ def get_patient_workouts(patient_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/therapist/patients/<int:patient_id>/progress', methods=['GET'])
-@jwt_required()
-def get_patient_progress(patient_id):
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
-        if not patient_profile:
-            return jsonify({'error': 'Patient not found'}), 404
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'Access denied'}), 403
-        
-        ninety_days_ago = datetime.utcnow() - timedelta(days=90)
-        workouts = WorkoutHistory.query.filter(
-            WorkoutHistory.user_id == patient_id,
-            WorkoutHistory.workout_date >= ninety_days_ago
-        ).order_by(WorkoutHistory.workout_date.asc()).all()
-        
-        weekly_progress = {}
-        for workout in workouts:
-            week_key = workout.workout_date.strftime('%Y-W%U')
-            if week_key not in weekly_progress:
-                weekly_progress[week_key] = {
-                    'workouts': 0,
-                    'exercises': {},
-                    'avg_form_scores': [],
-                    'week_start': workout.workout_date.strftime('%m/%d/%Y')
-                }
-            weekly_progress[week_key]['workouts'] += 1
-            if workout.exercise_type:
-                weekly_progress[week_key]['exercises'][workout.exercise_type] = weekly_progress[week_key]['exercises'].get(workout.exercise_type, 0) + 1
-            if workout.avg_form_score:
-                weekly_progress[week_key]['avg_form_scores'].append(workout.avg_form_score)
-        
-        progress_data = []
-        for week, data in sorted(weekly_progress.items()):
-            avg_score = sum(data['avg_form_scores']) / len(data['avg_form_scores']) if data['avg_form_scores'] else 0
-            progress_data.append({
-                'week': week,
-                'week_start': data['week_start'],
-                'workouts_completed': data['workouts'],
-                'avg_form_score': round(avg_score, 1),
-                'exercises': data['exercises']
-            })
-        
-        return jsonify({
-            'progress': progress_data,
-            'total_workouts_90_days': len(workouts),
-            'current_streak': calculate_workout_streak(workouts)
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/therapist/notes', methods=['POST'])
 @jwt_required()
 def add_therapist_note():
