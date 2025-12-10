@@ -231,7 +231,9 @@ class ExerciseVideoAssignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=True)
+    demo_video_id = db.Column(db.Integer, db.ForeignKey('demo_videos.id'), nullable=True)
+    demo_video = db.relationship('DemoVideo', backref='assignments')
     exercise_type = db.Column(db.String(50))
     target_reps = db.Column(db.Integer)
     target_sets = db.Column(db.Integer, default=3)
@@ -553,25 +555,21 @@ def assign_exercise_video():
         
         if user.role in ['clinician', 'admin'] and patient_profile.assigned_therapist_id != current_user_id:
             return jsonify({'error': 'This patient is not assigned to you'}), 403
+        demo_video_id = data.get('demo_video_id')
         
-        video = Video.query.get(video_id)
-        if not video or video.is_deleted:
-            return jsonify({'error': 'Video not found'}), 404
+        if not demo_video_id:
+            return jsonify({'error': 'Demo video ID required'}), 400
         
-        exercise_type = data.get('exercise_type')
-        if not exercise_type and video.analysis_results:
-            try:
-                decrypted = decrypt_data(video.analysis_results)
-                analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                exercise_type = analysis.get('exercise_type', 'unknown')
-            except:
-                exercise_type = 'unknown'
+        demo_video = DemoVideo.query.get(demo_video_id)
+        if not demo_video or not demo_video.is_active:
+            return jsonify({'error': 'Demo video not found'}), 404
         
         assignment = ExerciseVideoAssignment(
             patient_id=patient_id,
             therapist_id=current_user_id,
-            video_id=video_id,
-            exercise_type=exercise_type,
+            demo_video_id=demo_video_id,
+            video_id=None,  # No user video, this is a demo assignment
+            exercise_type=demo_video.exercise_type,
             target_reps=data.get('target_reps', 12),
             target_sets=data.get('target_sets', 3),
             frequency_per_week=data.get('frequency_per_week', 3),
@@ -588,8 +586,8 @@ def assign_exercise_video():
         return jsonify({
             'message': 'Exercise video assigned successfully',
             'assignment_id': assignment.id,
-            'exercise_type': exercise_type,
-            'video_filename': video.filename
+            'exercise_type': demo_video.exercise_type,
+            'video_title': demo_video.title
         }), 201
         
     except Exception as e:
