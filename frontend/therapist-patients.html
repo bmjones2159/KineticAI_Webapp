@@ -1277,38 +1277,39 @@
             }
         }
 
-        function displayAvailableVideos() {
-            const grid = document.getElementById('videoSelectionGrid');
-            
-            if (availableVideos.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #718096;">No analyzed videos available for assignment</p>';
-                return;
+            function displayAvailableVideos() {
+                const grid = document.getElementById('videoSelectionGrid');
+                
+                if (availableVideos.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: #718096;">No demo videos available. Please seed demo videos first.</p>';
+                    return;
+                }
+                
+                grid.innerHTML = availableVideos.map(video => `
+                    <div class="video-option ${selectedVideoForAssignment === video.demo_id ? 'selected' : ''}" 
+                        onclick="selectVideoForAssignment(${video.demo_id})">
+                        <div class="video-option-header">
+                            <span class="video-option-title">${video.title}</span>
+                            <span class="video-option-score" style="background: #10b981;">${video.difficulty_level}</span>
+                        </div>
+                        <div class="video-option-details">
+                            <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
+                            <span>🎯 ${video.target_muscles}</span>
+                            <span>⏱️ ${Math.floor(video.duration_seconds / 60)}min</span>
+                        </div>
+                        <div style="font-size: 0.85em; color: #718096; margin-top: 8px;">
+                            ${video.description}
+                        </div>
+                    </div>
+                `).join('');
             }
-            
-            grid.innerHTML = availableVideos.map(video => `
-                <div class="video-option ${selectedVideoForAssignment === video.video_id ? 'selected' : ''}" 
-                    onclick="selectVideoForAssignment(${video.video_id})">
-                    <div class="video-option-header">
-                        <span class="video-option-title">${video.filename}</span>
-                        <span class="video-option-score">${Math.round(video.form_score)}% Form</span>
-                    </div>
-                    <div class="video-option-details">
-                        <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
-                        <span>📊 ${video.total_reps} reps</span>
-                        <span>👤 ${video.owner}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
 
-        function selectVideoForAssignment(videoId) {
-            selectedVideoForAssignment = videoId;
+        function selectVideoForAssignment(demoVideoId) {
+            selectedVideoForAssignment = demoVideoId;
             displayAvailableVideos();
             
-            const video = availableVideos.find(v => v.video_id === videoId);
-            if (video) {
-                document.getElementById('assignTargetReps').value = video.total_reps || 12;
-            }
+            // Don't auto-fill reps - let therapist decide
+            // Demo videos don't have a "total reps" value
         }
 
         async function submitExerciseAssignment() {
@@ -1333,7 +1334,7 @@
                     },
                     body: JSON.stringify({
                         patient_id: currentAssignmentPatientId,
-                        video_id: selectedVideoForAssignment,
+                        demo_video_id: selectedVideoForAssignment,  
                         target_reps: targetReps,
                         target_sets: targetSets,
                         frequency_per_week: frequency,
