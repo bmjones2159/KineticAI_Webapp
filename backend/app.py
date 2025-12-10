@@ -551,7 +551,7 @@ def assign_exercise_video():
         if not patient_profile:
             return jsonify({'error': 'Patient not found'}), 404
         
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+        if user.role in ['clinician', 'admin'] and patient_profile.assigned_therapist_id != current_user_id:
             return jsonify({'error': 'This patient is not assigned to you'}), 403
         
         video = Video.query.get(video_id)
@@ -612,7 +612,7 @@ def get_patient_assigned_videos(patient_id):
         if not patient_profile:
             return jsonify({'error': 'Patient not found'}), 404
         
-        if user.role == 'clinician' and patient_profile.assigned_therapist_id != current_user_id:
+        if user.role in ['clinician', 'admin'] and patient_profile.assigned_therapist_id != current_user_id:
             return jsonify({'error': 'Access denied'}), 403
         
         assignments = ExerciseVideoAssignment.query.filter_by(
@@ -669,7 +669,7 @@ def remove_exercise_assignment(assignment_id):
         if not assignment:
             return jsonify({'error': 'Assignment not found'}), 404
         
-        if user.role == 'clinician' and assignment.therapist_id != current_user_id:
+        if user.role in ['clinician', 'admin'] and assignment.therapist_id != current_user_id:
             return jsonify({'error': 'Access denied'}), 403
         
         assignment.is_active = False
@@ -907,7 +907,7 @@ def get_patient_details(patient_id):
         
         if not profile:
             return jsonify({'error': 'Patient not found'}), 404
-        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
+        if user.role in ['clinician', 'admin'] and profile.assigned_therapist_id != current_user_id:
             return jsonify({'error': 'Access denied'}), 403
         
         workouts = WorkoutHistory.query.filter_by(user_id=profile.user_id).order_by(WorkoutHistory.workout_date.desc()).limit(20).all()
@@ -962,7 +962,7 @@ def get_patient_details(patient_id):
                 'title': n.title,
                 'content': n.content,
                 'created_at': n.created_at.isoformat(),
-                'therapist': n.therapist.username
+                ['clinician', 'admin']: n.therapist.username
             } for n in notes]
         }), 200
     except Exception as e:
@@ -981,7 +981,7 @@ def update_patient(patient_id):
         profile = PatientProfile.query.get(patient_id)
         if not profile:
             return jsonify({'error': 'Patient not found'}), 404
-        if user.role == 'clinician' and profile.assigned_therapist_id != current_user_id:
+        if user.role in ['clinician', 'admin'] and profile.assigned_therapist_id != current_user_id:
             return jsonify({'error': 'Access denied'}), 403
         
         data = request.get_json()
@@ -1259,7 +1259,7 @@ def create_demo_users():
     try:
         demo_users = [
             {'username': 'patient', 'email': 'patient@kineticai.com', 'password': 'patient123', 'role': 'user'},
-            {'username': 'therapist', 'email': 'therapist@kineticai.com', 'password': 'therapist123', 'role': 'clinician'},
+            {'username': ['clinician', 'admin'], 'email': 'therapist@kineticai.com', 'password': 'therapist123', 'role': 'clinician'},
             {'username': 'admin', 'email': 'admin@kineticai.com', 'password': 'admin123', 'role': 'admin'}
         ]
         
@@ -1546,7 +1546,7 @@ def get_patient_completions_for_therapist(patient_id):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
-        if user.role != 'therapist':
+        if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Only therapists can view this'}), 403
         
         # Verify patient exists
@@ -1618,7 +1618,7 @@ def review_workout_completion(completion_id):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
-        if user.role != 'therapist':
+        if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Only therapists can review workouts'}), 403
         
         completion = WorkoutCompletion.query.get(completion_id)
@@ -1669,7 +1669,7 @@ def get_completion_details(completion_id):
         # Check authorization
         if user.role == 'patient' and completion.patient_id != user_id:
             return jsonify({'error': 'Not authorized'}), 403
-        elif user.role == 'therapist' and completion.therapist_id != user_id:
+        elif user.role in ['clinician', 'admin'] and completion.therapist_id != user_id:
             return jsonify({'error': 'Not authorized'}), 403
         
         assignment = completion.assignment
@@ -2204,7 +2204,7 @@ def get_patient_workouts(patient_id):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
-        if user.role != 'therapist':
+        if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Only therapists can access this'}), 403
         
         # Get workouts
@@ -2267,7 +2267,7 @@ def add_workout_feedback(workout_id):
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
-        if user.role != 'therapist':
+        if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Only therapists can add feedback'}), 403
         
         workout = WorkoutLog.query.get(workout_id)
