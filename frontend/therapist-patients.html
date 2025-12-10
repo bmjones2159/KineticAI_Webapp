@@ -111,7 +111,6 @@
             padding: 20px;
             border-left: 4px solid #10b981;
             transition: all 0.3s;
-            cursor: pointer;
         }
 
         .patient-card:hover {
@@ -169,6 +168,20 @@
         .stat-label {
             font-size: 0.8em;
             color: #666;
+        }
+
+        .patient-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .patient-actions .btn {
+            flex: 1;
+            font-size: 0.9em;
+            padding: 10px;
         }
 
         /* Modal Styles */
@@ -354,7 +367,17 @@
             resize: vertical;
         }
 
-        .form-group textarea:focus {
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        .form-group textarea:focus,
+        .form-group input:focus {
             outline: none;
             border-color: #10b981;
         }
@@ -833,6 +856,43 @@
     border-radius: 5px;
     color: #856404;
 }
+
+.quick-action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+.action-box {
+    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.action-box.green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.action-box.blue {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+}
+
+.action-box .btn {
+    font-size: 1.1em;
+    padding: 15px 40px;
+    background: white;
+    border: none;
+    font-weight: 600;
+}
+
+.action-box.green .btn {
+    color: #10b981;
+}
+
+.action-box.blue .btn {
+    color: #3498db;
+}
     </style>
 </head>
 <body>
@@ -1009,226 +1069,6 @@
     </div>
 </div>
 
-<script>
-let selectedVideoForAssignment = null;
-let currentAssignmentPatientId = null;
-let availableVideos = [];
-
-// Open assignment modal
-function openAssignExerciseModal(patientId, patientName) {
-    currentAssignmentPatientId = patientId;
-    document.getElementById('assignPatientName').textContent = patientName;
-    document.getElementById('assignExerciseModal').style.display = 'block';
-    
-    // Load available videos
-    loadAvailableVideos();
-    
-    // Load current assignments
-    loadCurrentAssignments(patientId);
-}
-
-// Close modal
-function closeAssignExerciseModal() {
-    document.getElementById('assignExerciseModal').style.display = 'none';
-    selectedVideoForAssignment = null;
-    currentAssignmentPatientId = null;
-}
-
-// Load available exercise videos
-async function loadAvailableVideos() {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/therapist/available-exercise-videos`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load videos');
-        
-        const data = await response.json();
-        availableVideos = data.videos;
-        displayAvailableVideos();
-        
-    } catch (error) {
-        console.error('Error loading videos:', error);
-        alert('Failed to load available videos');
-    }
-}
-
-// Display video options
-function displayAvailableVideos() {
-    const grid = document.getElementById('videoSelectionGrid');
-    
-    if (availableVideos.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #718096;">No analyzed videos available for assignment</p>';
-        return;
-    }
-    
-    grid.innerHTML = availableVideos.map(video => `
-        <div class="video-option ${selectedVideoForAssignment === video.video_id ? 'selected' : ''}" 
-            onclick="selectVideoForAssignment(${video.video_id})">
-            <div class="video-option-header">
-                <span class="video-option-title">${video.filename}</span>
-                <span class="video-option-score">${Math.round(video.form_score)}% Form</span>
-            </div>
-            <div class="video-option-details">
-                <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
-                <span>📊 ${video.total_reps} reps</span>
-                <span>👤 ${video.owner}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Select video for assignment
-function selectVideoForAssignment(videoId) {
-    selectedVideoForAssignment = videoId;
-    displayAvailableVideos();
-    
-    // Auto-fill details from video
-    const video = availableVideos.find(v => v.video_id === videoId);
-    if (video) {
-        document.getElementById('assignTargetReps').value = video.total_reps || 12;
-    }
-}
-
-// Submit assignment
-async function submitExerciseAssignment() {
-    if (!selectedVideoForAssignment) {
-        alert('Please select a video to assign');
-        return;
-    }
-    
-    const targetReps = parseInt(document.getElementById('assignTargetReps').value);
-    const targetSets = parseInt(document.getElementById('assignTargetSets').value);
-    const frequency = parseInt(document.getElementById('assignFrequency').value);
-    const dueDate = document.getElementById('assignDueDate').value;
-    const instructions = document.getElementById('assignInstructions').value;
-    
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/therapist/assign-exercise-video`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                patient_id: currentAssignmentPatientId,
-                video_id: selectedVideoForAssignment,
-                target_reps: targetReps,
-                target_sets: targetSets,
-                frequency_per_week: frequency,
-                due_date: dueDate || null,
-                instructions: instructions
-            })
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to assign exercise');
-        }
-        
-        const result = await response.json();
-        alert('✓ Exercise assigned successfully!');
-        
-        // Refresh assignments list
-        loadCurrentAssignments(currentAssignmentPatientId);
-        
-        // Clear form
-        selectedVideoForAssignment = null;
-        document.getElementById('assignTargetReps').value = 12;
-        document.getElementById('assignTargetSets').value = 3;
-        document.getElementById('assignFrequency').value = 3;
-        document.getElementById('assignDueDate').value = '';
-        document.getElementById('assignInstructions').value = '';
-        displayAvailableVideos();
-        
-    } catch (error) {
-        console.error('Error assigning exercise:', error);
-        alert(error.message);
-    }
-}
-
-// Load current assignments
-async function loadCurrentAssignments(patientId) {
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}/assigned-videos`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to load assignments');
-        
-        const data = await response.json();
-        displayCurrentAssignments(data.assignments);
-        
-    } catch (error) {
-        console.error('Error loading assignments:', error);
-    }
-}
-
-// Display current assignments
-function displayCurrentAssignments(assignments) {
-    const list = document.getElementById('currentAssignmentsList');
-    
-    if (assignments.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: #718096;">No assignments yet</p>';
-        return;
-    }
-    
-    list.innerHTML = assignments.map(assignment => `
-        <div class="assigned-video-item">
-            <div class="assigned-video-info">
-                <h4>${assignment.video_filename}</h4>
-                <p>
-                    <strong>${assignment.exercise_type.toUpperCase()}</strong> • 
-                    ${assignment.target_reps} reps × ${assignment.target_sets} sets • 
-                    ${assignment.frequency_per_week}x/week
-                </p>
-                ${assignment.instructions ? `<p>📝 ${assignment.instructions}</p>` : ''}
-                <p>
-                    <span class="assignment-status ${assignment.completed ? 'status-completed' : 'status-pending'}">
-                        ${assignment.completed ? '✓ Completed' : '⏳ Pending'}
-                    </span>
-                    ${assignment.due_date ? ` • Due: ${new Date(assignment.due_date).toLocaleDateString()}` : ''}
-                </p>
-            </div>
-            <button class="btn-remove-assignment" onclick="removeAssignment(${assignment.assignment_id})">
-                Remove
-            </button>
-        </div>
-    `).join('');
-}
-
-// Remove assignment
-async function removeAssignment(assignmentId) {
-    if (!confirm('Remove this exercise assignment?')) return;
-    
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/api/therapist/assigned-videos/${assignmentId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) throw new Error('Failed to remove assignment');
-        
-        alert('Assignment removed');
-        loadCurrentAssignments(currentAssignmentPatientId);
-        
-    } catch (error) {
-        console.error('Error removing assignment:', error);
-        alert('Failed to remove assignment');
-    }
-}
-</script>
-
     <!-- Patient Review Modal -->
     <div id="patientReviewModal" class="modal">
         <div class="modal-content">
@@ -1245,6 +1085,9 @@ async function removeAssignment(assignmentId) {
         const API_URL = window.location.origin;
         let allPatients = [];
         let currentPatient = null;
+        let selectedVideoForAssignment = null;
+        let currentAssignmentPatientId = null;
+        let availableVideos = [];
 
         async function loadPatients() {
             try {
@@ -1282,7 +1125,7 @@ async function removeAssignment(assignmentId) {
                 const lastSession = p.last_session ? new Date(p.last_session).toLocaleDateString() : 'Never';
                 
                 return `
-                    <div class="patient-card" onclick="viewPatientReview(${p.id})">
+                    <div class="patient-card">
                         <div class="patient-header">
                             <div class="patient-name">${p.full_name || p.username}</div>
                             <div class="patient-status">${p.current_status || 'Active'}</div>
@@ -1309,6 +1152,17 @@ async function removeAssignment(assignmentId) {
                                 <div class="stat-value">${p.avg_form_score || 0}%</div>
                                 <div class="stat-label">Avg Form</div>
                             </div>
+                        </div>
+
+                        <div class="patient-actions">
+                            <button class="btn btn-primary" 
+                                onclick="window.location.href='/therapist-workout-reviews.html?patient_id=${p.user_id}'">
+                                📋 View Workouts
+                            </button>
+                            <button class="btn btn-outline" 
+                                onclick="viewPatientReview(${p.id})">
+                                👁️ Full Review
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1386,6 +1240,205 @@ async function removeAssignment(assignmentId) {
             }
         }
 
+        // Assignment Modal Functions
+        function openAssignExerciseModal(patientId, patientName) {
+            currentAssignmentPatientId = patientId;
+            document.getElementById('assignPatientName').textContent = patientName;
+            document.getElementById('assignExerciseModal').style.display = 'block';
+            
+            loadAvailableVideos();
+            loadCurrentAssignments(patientId);
+        }
+
+        function closeAssignExerciseModal() {
+            document.getElementById('assignExerciseModal').style.display = 'none';
+            selectedVideoForAssignment = null;
+            currentAssignmentPatientId = null;
+        }
+
+        async function loadAvailableVideos() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/available-exercise-videos`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load videos');
+                
+                const data = await response.json();
+                availableVideos = data.videos;
+                displayAvailableVideos();
+                
+            } catch (error) {
+                console.error('Error loading videos:', error);
+                alert('Failed to load available videos');
+            }
+        }
+
+        function displayAvailableVideos() {
+            const grid = document.getElementById('videoSelectionGrid');
+            
+            if (availableVideos.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #718096;">No analyzed videos available for assignment</p>';
+                return;
+            }
+            
+            grid.innerHTML = availableVideos.map(video => `
+                <div class="video-option ${selectedVideoForAssignment === video.video_id ? 'selected' : ''}" 
+                    onclick="selectVideoForAssignment(${video.video_id})">
+                    <div class="video-option-header">
+                        <span class="video-option-title">${video.filename}</span>
+                        <span class="video-option-score">${Math.round(video.form_score)}% Form</span>
+                    </div>
+                    <div class="video-option-details">
+                        <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
+                        <span>📊 ${video.total_reps} reps</span>
+                        <span>👤 ${video.owner}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectVideoForAssignment(videoId) {
+            selectedVideoForAssignment = videoId;
+            displayAvailableVideos();
+            
+            const video = availableVideos.find(v => v.video_id === videoId);
+            if (video) {
+                document.getElementById('assignTargetReps').value = video.total_reps || 12;
+            }
+        }
+
+        async function submitExerciseAssignment() {
+            if (!selectedVideoForAssignment) {
+                alert('Please select a video to assign');
+                return;
+            }
+            
+            const targetReps = parseInt(document.getElementById('assignTargetReps').value);
+            const targetSets = parseInt(document.getElementById('assignTargetSets').value);
+            const frequency = parseInt(document.getElementById('assignFrequency').value);
+            const dueDate = document.getElementById('assignDueDate').value;
+            const instructions = document.getElementById('assignInstructions').value;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/assign-exercise-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        patient_id: currentAssignmentPatientId,
+                        video_id: selectedVideoForAssignment,
+                        target_reps: targetReps,
+                        target_sets: targetSets,
+                        frequency_per_week: frequency,
+                        due_date: dueDate || null,
+                        instructions: instructions
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to assign exercise');
+                }
+                
+                alert('✓ Exercise assigned successfully!');
+                
+                loadCurrentAssignments(currentAssignmentPatientId);
+                
+                selectedVideoForAssignment = null;
+                document.getElementById('assignTargetReps').value = 12;
+                document.getElementById('assignTargetSets').value = 3;
+                document.getElementById('assignFrequency').value = 3;
+                document.getElementById('assignDueDate').value = '';
+                document.getElementById('assignInstructions').value = '';
+                displayAvailableVideos();
+                
+            } catch (error) {
+                console.error('Error assigning exercise:', error);
+                alert(error.message);
+            }
+        }
+
+        async function loadCurrentAssignments(patientId) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}/assigned-videos`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load assignments');
+                
+                const data = await response.json();
+                displayCurrentAssignments(data.assignments);
+                
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+            }
+        }
+
+        function displayCurrentAssignments(assignments) {
+            const list = document.getElementById('currentAssignmentsList');
+            
+            if (assignments.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #718096;">No assignments yet</p>';
+                return;
+            }
+            
+            list.innerHTML = assignments.map(assignment => `
+                <div class="assigned-video-item">
+                    <div class="assigned-video-info">
+                        <h4>${assignment.video_filename}</h4>
+                        <p>
+                            <strong>${assignment.exercise_type.toUpperCase()}</strong> • 
+                            ${assignment.target_reps} reps × ${assignment.target_sets} sets • 
+                            ${assignment.frequency_per_week}x/week
+                        </p>
+                        ${assignment.instructions ? `<p>📝 ${assignment.instructions}</p>` : ''}
+                        <p>
+                            <span class="assignment-status ${assignment.completed ? 'status-completed' : 'status-pending'}">
+                                ${assignment.completed ? '✓ Completed' : '⏳ Pending'}
+                            </span>
+                            ${assignment.due_date ? ` • Due: ${new Date(assignment.due_date).toLocaleDateString()}` : ''}
+                        </p>
+                    </div>
+                    <button class="btn-remove-assignment" onclick="removeAssignment(${assignment.assignment_id})">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function removeAssignment(assignmentId) {
+            if (!confirm('Remove this exercise assignment?')) return;
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/assigned-videos/${assignmentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) throw new Error('Failed to remove assignment');
+                
+                alert('Assignment removed');
+                loadCurrentAssignments(currentAssignmentPatientId);
+                
+            } catch (error) {
+                console.error('Error removing assignment:', error);
+                alert('Failed to remove assignment');
+            }
+        }
+
         async function viewPatientReview(patientId) {
             try {
                 const token = localStorage.getItem('token');
@@ -1421,26 +1474,22 @@ async function removeAssignment(assignmentId) {
                     </div>
                 </div>
 
-                <!-- Assign Exercise Button -->
-                <div style="margin: 20px 0; text-align: center; padding: 20px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px;">
-                    <button class="btn btn-primary" style="font-size: 1.1em; padding: 15px 40px; background: white; color: #10b981; border: none; font-weight: 600;" 
-                        onclick="openAssignExerciseModal(${patient.user_id}, '${(patient.full_name || patient.username).replace(/'/g, "\\'")}')">
-                        📋 Assign Exercise Video to This Patient
-                    </button>
+                <!-- Quick Action Buttons -->
+                <div class="quick-action-grid">
+                    <div class="action-box green">
+                        <button class="btn btn-primary" 
+                            onclick="openAssignExerciseModal(${patient.user_id}, '${(patient.full_name || patient.username).replace(/'/g, "\\'")}')">
+                            📋 Assign Exercise Video
+                        </button>
+                    </div>
+                    <div class="action-box blue">
+                        <button class="btn btn-primary" 
+                            onclick="window.location.href='/therapist-workout-reviews.html?patient_id=${patient.user_id}'">
+                            📊 View All Workouts
+                        </button>
+                    </div>
                 </div>
 
-             <!-- For each patient in your list -->
-                <div class="patient-card">
-                    <h3>John Doe</h3>
-                    <button onclick="viewWorkouts(123)">📋 View Workouts</button>
-                </div>
-                
-                <script>
-                function viewWorkouts(patientId) {
-                    window.location.href = `/therapist-workout-reviews.html?patient_id=${patientId}`;
-                }
-                </script `;
-            
                 <!-- Workout Progress Section -->
                 <div class="patient-info-section">
                     <h3>📊 Workout Progress & Compliance</h3>
@@ -1484,7 +1533,6 @@ async function removeAssignment(assignmentId) {
 
             document.getElementById('patientReviewContent').innerHTML = contentHtml;
             
-            // Load workout progress data
             loadPatientProgress(patient.user_id);
         }
 
@@ -1689,7 +1737,6 @@ async function removeAssignment(assignmentId) {
             try {
                 const token = localStorage.getItem('token');
                 
-                // Load workout history
                 const workoutsResponse = await fetch(`${API_URL}/api/therapist/patients/${patientId}/workouts?limit=30`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -1697,7 +1744,6 @@ async function removeAssignment(assignmentId) {
                 if (!workoutsResponse.ok) throw new Error('Failed to load workouts');
                 const workoutsData = await workoutsResponse.json();
                 
-                // Load progress metrics
                 const progressResponse = await fetch(`${API_URL}/api/therapist/patients/${patientId}/progress`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -1817,11 +1863,14 @@ async function removeAssignment(assignmentId) {
         }
 
         function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'index.html';
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+            }
         }
 
+        // Initialize
         loadPatients();
     </script>
 </body>
