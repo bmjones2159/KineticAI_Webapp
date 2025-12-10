@@ -3,426 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KineticAI - Physical Therapy Video Analysis</title>
+    <title>Login - KineticAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #4A1D6A;
+            --primary-light: #6B2D8B;
+            --accent: #D4AF37;
+            --accent-light: #E5C55A;
         }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
         }
-
-        .container {
+        
+        .login-container {
             background: white;
-            border-radius: 20px;
+            border-radius: 1.5rem;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 450px;
             width: 100%;
-            padding: 40px;
-            animation: slideIn 0.5s ease-out;
+            max-width: 420px;
+            padding: 2.5rem;
+            margin: 1rem;
         }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        
         .logo {
-            text-align: center;
-            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
         }
-
-        .logo h1 {
-            color: #667eea;
-            font-size: 2.5em;
+        
+        .logo svg {
+            width: 48px;
+            height: 48px;
+            color: var(--accent);
+        }
+        
+        .logo-text {
+            font-size: 2rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            color: var(--primary);
         }
-
-        .logo p {
+        
+        .tagline {
+            text-align: center;
             color: #666;
-            font-size: 1em;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
         }
-
+        
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 1.25rem;
         }
-
-        .form-group label {
+        
+        .form-label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
         }
-
-        .form-group input, .form-group select {
+        
+        .form-input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            transition: all 0.2s;
         }
-
-        .form-group input:focus, .form-group select:focus {
+        
+        .form-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(74, 29, 106, 0.1);
         }
-
-        .btn {
+        
+        .btn-login {
             width: 100%;
-            padding: 15px;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 16px;
+            border-radius: 0.75rem;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
+            transition: all 0.2s;
+            margin-top: 0.5rem;
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
+        
+        .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 20px rgba(74, 29, 106, 0.4);
         }
-
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+        
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
-
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .toggle-form {
-            text-align: center;
-            margin-top: 20px;
-            color: #666;
-        }
-
-        .toggle-form a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .toggle-form a:hover {
-            text-decoration: underline;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+        
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
             display: none;
         }
-
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-
-        .alert-success {
-            background: #efe;
-            color: #3c3;
-            border: 1px solid #cfc;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        #registerForm {
-            display: none;
-        }
-
+        
         .demo-credentials {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
         }
-
-        .demo-credentials h4 {
-            color: #667eea;
-            margin-bottom: 10px;
+        
+        .demo-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+            text-align: center;
         }
-
-        .demo-credentials p {
-            margin: 5px 0;
-            color: #666;
+        
+        .demo-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .demo-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .demo-card:hover {
+            background: #f3f4f6;
+            border-color: var(--primary);
+        }
+        
+        .demo-card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .demo-card-role {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .demo-card-creds {
+            font-size: 0.65rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 0.5rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+
+    <div class="login-container">
         <div class="logo">
-            <h1>🏃 KineticAI</h1>
-            <p>AI-Powered Physical Therapy Analysis</p>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            <span class="logo-text">KineticAI</span>
         </div>
-
+        
+        <p class="tagline">AI-Powered Physical Therapy Platform</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input" id="username" required placeholder="Enter your username">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input" id="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn-login" id="loginBtn">
+                Sign In
+            </button>
+        </form>
+        
         <div class="demo-credentials">
-            <h4>Demo Login Credentials:</h4>
-            <p><strong>Patient:</strong> patient / patient123</p>
-            <p><strong>Physical Therapist:</strong> therapist / therapist123</p>
-            <p><strong>Admin:</strong> admin / admin123</p>
+            <div class="demo-title">Quick Demo Access</div>
+            <div class="demo-cards">
+                <div class="demo-card" onclick="fillCredentials('therapist', 'therapist123')">
+                    <div class="demo-card-icon">👨‍⚕️</div>
+                    <div class="demo-card-role">Therapist</div>
+                    <div class="demo-card-creds">therapist / therapist123</div>
+                </div>
+                <div class="demo-card" onclick="fillCredentials('patient', 'patient123')">
+                    <div class="demo-card-icon">🏃</div>
+                    <div class="demo-card-role">Patient</div>
+                    <div class="demo-card-creds">patient / patient123</div>
+                </div>
+            </div>
         </div>
-
-        <div id="alert" class="alert"></div>
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Loading...</p>
-        </div>
-
-        <!-- Login Form -->
-        <form id="loginForm">
-            <h2 style="margin-bottom: 25px; color: #333; text-align: center;">Welcome Back</h2>
-            
-            <div class="form-group">
-                <label for="loginUsername">Username</label>
-                <input type="text" id="loginUsername" required placeholder="Enter your username">
-            </div>
-
-            <div class="form-group">
-                <label for="loginPassword">Password</label>
-                <input type="password" id="loginPassword" required placeholder="Enter your password">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Sign In</button>
-
-            <div class="toggle-form">
-                Don't have an account? <a href="#" id="showRegister">Sign Up</a>
-            </div>
-        </form>
-
-        <!-- Register Form -->
-        <form id="registerForm">
-            <h2 style="margin-bottom: 25px; color: #333; text-align: center;">Create Account</h2>
-            
-            <div class="form-group">
-                <label for="registerUsername">Username</label>
-                <input type="text" id="registerUsername" required placeholder="Choose a username">
-            </div>
-
-            <div class="form-group">
-                <label for="registerEmail">Email</label>
-                <input type="email" id="registerEmail" required placeholder="your.email@example.com">
-            </div>
-
-            <div class="form-group">
-                <label for="registerPassword">Password</label>
-                <input type="password" id="registerPassword" required placeholder="Choose a strong password">
-            </div>
-
-            <div class="form-group">
-                <label for="registerRole">I am a:</label>
-                <select id="registerRole" required>
-                    <option value="">Select your role</option>
-                    <option value="user">Patient</option>
-                    <option value="clinician">Physical Therapist</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-primary">Sign Up</button>
-
-            <div class="toggle-form">
-                Already have an account? <a href="#" id="showLogin">Sign In</a>
-            </div>
-        </form>
     </div>
 
     <script>
-        // API Base URL (update this to your Render URL after deployment)
         const API_URL = window.location.origin;
 
-        // DOM Elements
-        const loginForm = document.getElementById('loginForm');
-        const registerForm = document.getElementById('registerForm');
-        const showRegisterLink = document.getElementById('showRegister');
-        const showLoginLink = document.getElementById('showLogin');
-        const alert = document.getElementById('alert');
-        const loading = document.getElementById('loading');
-
-        // Toggle between login and register
-        showRegisterLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.style.display = 'none';
-            registerForm.style.display = 'block';
-            hideAlert();
-        });
-
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerForm.style.display = 'none';
-            loginForm.style.display = 'block';
-            hideAlert();
-        });
-
-        // Show/hide alert
-        function showAlert(message, type = 'error') {
-            alert.textContent = message;
-            alert.className = `alert alert-${type}`;
-            alert.style.display = 'block';
+        function fillCredentials(username, password) {
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
         }
 
-        function hideAlert() {
-            alert.style.display = 'none';
-        }
-
-        function showLoading() {
-            loading.style.display = 'block';
-        }
-
-        function hideLoading() {
-            loading.style.display = 'none';
-        }
-
-        // Login handler
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideAlert();
-            showLoading();
-
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Hide previous error
+            errorMessage.style.display = 'none';
+            
+            // Show loading
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+            
             try {
                 const response = await fetch(`${API_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ username, password })
                 });
-
+                
                 const data = await response.json();
-
-                if (response.ok) {
-                    // Store token and user info
-                    localStorage.setItem('token', data.access_token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    // Redirect based on role
-                    if (data.user.role === 'clinician' || data.user.role === 'admin') {
-                        window.location.href = 'therapist-dashboard.html';
-                    } else {
-                        window.location.href = 'patient-dashboard.html';
-                    }
-                } else {
-                    showAlert(data.error || 'Login failed. Please check your credentials.');
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
                 }
+                
+                // Store token
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // Redirect based on role
+                if (data.user.role === 'clinician' || data.user.role === 'admin') {
+                    window.location.href = 'therapist-patients.html';
+                } else {
+                    window.location.href = 'patient-dashboard.html';
+                }
+                
             } catch (error) {
-                showAlert('Network error. Please try again.');
                 console.error('Login error:', error);
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // Register handler
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideAlert();
-            showLoading();
-
-            const username = document.getElementById('registerUsername').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const role = document.getElementById('registerRole').value;
-
-            try {
-                const response = await fetch(`${API_URL}/api/auth/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, email, password, role })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showAlert('Registration successful! Please sign in.', 'success');
-                    setTimeout(() => {
-                        registerForm.style.display = 'none';
-                        loginForm.style.display = 'block';
-                        registerForm.reset();
-                    }, 2000);
-                } else {
-                    showAlert(data.error || 'Registration failed. Please try again.');
-                }
-            } catch (error) {
-                showAlert('Network error. Please try again.');
-                console.error('Registration error:', error);
-            } finally {
-                hideLoading();
-            }
-        });
-
-        // Create default users if they don't exist (for demo purposes)
-        async function initializeDemoUsers() {
-            const demoUsers = [
-                { username: 'patient', email: 'patient@demo.com', password: 'patient123', role: 'user' },
-                { username: 'therapist', email: 'therapist@demo.com', password: 'therapist123', role: 'clinician' },
-                { username: 'admin', email: 'admin@demo.com', password: 'admin123', role: 'admin' }
-            ];
-
-            for (const user of demoUsers) {
-                try {
-                    await fetch(`${API_URL}/api/auth/register`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(user)
-                    });
-                } catch (error) {
-                    // Ignore errors (users might already exist)
-                }
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Sign In';
             }
         }
 
-        // Initialize demo users on page load
-        initializeDemoUsers();
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            if (token && user) {
+                const userData = JSON.parse(user);
+                if (userData.role === 'clinician' || userData.role === 'admin') {
+                    window.location.href = 'therapist-patients.html';
+                } else {
+                    window.location.href = 'patient-dashboard.html';
+                }
+            }
+        });
     </script>
+
 </body>
 </html>
