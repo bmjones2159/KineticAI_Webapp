@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO8 Analysis Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff00;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            background: #2d2d2d;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: #00ffff;
+            margin-bottom: 15px;
+        }
+
+        input, button {
+            padding: 10px;
+            margin: 10px 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        input {
+            background: #1e1e1e;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            flex: 1;
+        }
+
+        button {
+            background: #00ff00;
+            color: #1e1e1e;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #00ffff;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .result {
+            background: #1e1e1e;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #00ff00;
+        }
+
+        .error {
+            color: #ff0000;
+        }
+
+        .warning {
+            color: #ffff00;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+
+        .status.pass {
+            background: #00ff00;
+            color: #1e1e1e;
+        }
+
+        .status.fail {
+            background: #ff0000;
+            color: white;
+        }
+
+        .status.warn {
+            background: #ffff00;
+            color: #1e1e1e;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid #00ff00;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #00ff00;
+            color: #1e1e1e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 YOLO8 ANALYSIS VERIFICATION TESTER</h1>
+
+        <!-- Step 1: Login -->
+        <div class="section">
+            <h2>STEP 1: Get Authentication Token</h2>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Username (e.g., patient)" value="patient">
+                <input type="password" id="password" placeholder="Password" value="patient123">
+                <button onclick="login()">Login & Get Token</button>
+            </div>
+            <div id="loginResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Step 2: Check Video -->
+        <div class="section">
+            <h2>STEP 2: Check Video Analysis Data</h2>
+            <div class="input-group">
+                <input type="number" id="videoId" placeholder="Video ID (e.g., 16)">
+                <button onclick="checkVideo()">Check Video</button>
+            </div>
+            <div id="videoResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- Step 3: Verify Analysis -->
+        <div class="section">
+            <h2>STEP 3: Analysis Verification Results</h2>
+            <div id="verificationResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let authToken = null;
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="warning">Logging in...</span>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('token', authToken);
+                    resultDiv.innerHTML = `
+                        <span class="success">✓ LOGIN SUCCESSFUL</span>
+                        <br><br>User: ${data.user.username}
+                        <br>Role: ${data.user.role}
+                        <br>Token: ${authToken.substring(0, 30)}...
+                        <br><br><span class="status pass">READY TO TEST</span>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">✗ LOGIN FAILED: ${data.error}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">✗ ERROR: ${error.message}</span>`;
+            }
+        }
+
+        async function checkVideo() {
+            const videoId = document.getElementById('videoId').value;
+            const resultDiv = document.getElementById('videoResult');
+            const verifyDiv = document.getElementById('verificationResult');
+
+            if (!authToken) {
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<span class="error">✗ Please login first!</span>';
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="warning">Fetching video data...</span>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/videos/${videoId}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    // Try alternative endpoint for therapists
+                    const altResponse = await fetch(`${API_URL}/api/videos/${videoId}/details`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    
+                    if (altResponse.ok) {
+                        const data = await altResponse.json();
+                        displayResults(data, resultDiv, verifyDiv);
+                    } else {
+                        resultDiv.innerHTML = `<span class="error">✗ FAILED: ${response.status} ${response.statusText}</span>`;
+                    }
+                } else {
+                    const data = await response.json();
+                    displayResults(data, resultDiv, verifyDiv);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">✗ ERROR: ${error.message}</span>`;
+            }
+        }
+
+        function displayResults(data, resultDiv, verifyDiv) {
+            // Display raw data
+            resultDiv.innerHTML = `
+                <span class="success">✓ VIDEO DATA RETRIEVED</span>
+                <br><br><strong>RAW API RESPONSE:</strong>
+                <br>${JSON.stringify(data, null, 2)}
+            `;
+
+            // Verify analysis
+            verifyDiv.style.display = 'block';
+            const checks = [];
+
+            // Check 1: Has analysis_results
+            if (data.analysis_results) {
+                checks.push({
+                    test: 'Has analysis_results',
+                    status: 'pass',
+                    message: '✓ analysis_results object exists'
+                });
+
+                const analysis = data.analysis_results;
+
+                // Check 2: Exercise Type
+                if (analysis.exercise_type && analysis.exercise_type !== 'Unknown') {
+                    checks.push({
+                        test: 'Exercise Type',
+                        status: 'pass',
+                        message: `✓ ${analysis.exercise_type.toUpperCase()}`
+                    });
+                } else {
+                    checks.push({
+                        test: 'Exercise Type',
+                        status: 'fail',
+                        message: '✗ Missing or Unknown'
+                    });
+                }
+
+                // Check 3: Reps Count
+                if (analysis.total_reps && analysis.total_reps > 0) {
+                    checks.push({
+                        test: 'Reps Count',
+                        status: 'pass',
+                        message: `✓ ${analysis.total_reps} reps`
+                    });
+                } else {
+                    checks.push({
+                        test: 'Reps Count',
+                        status: 'fail',
+                        message: '✗ Zero or missing'
+                    });
+                }
+
+                // Check 4: Form Score
+                const formScore = analysis.average_accuracy || analysis.form_score;
+                if (formScore && formScore > 0) {
+                    checks.push({
+                        test: 'Form Score',
+                        status: 'pass',
+                        message: `✓ ${Math.round(formScore)}%`
+                    });
+                } else {
+                    checks.push({
+                        test: 'Form Score',
+                        status: 'fail',
+                        message: '✗ Zero or missing'
+                    });
+                }
+
+                // Check 5: Frames Analyzed
+                if (analysis.total_frames && analysis.total_frames > 0) {
+                    checks.push({
+                        test: 'Frames Analyzed',
+                        status: 'pass',
+                        message: `✓ ${analysis.total_frames} frames`
+                    });
+                } else {
+                    checks.push({
+                        test: 'Frames Analyzed',
+                        status: 'warn',
+                        message: '⚠ Missing frame count'
+                    });
+                }
+
+                // Check 6: Issues Detected
+                if (analysis.most_common_issues && analysis.most_common_issues.length > 0) {
+                    checks.push({
+                        test: 'Issues Detected',
+                        status: 'pass',
+                        message: `✓ ${analysis.most_common_issues.length} issues: ${analysis.most_common_issues.join(', ')}`
+                    });
+                } else {
+                    checks.push({
+                        test: 'Issues Detected',
+                        status: 'warn',
+                        message: '⚠ No issues (perfect form or not detected)'
+                    });
+                }
+
+            } else {
+                checks.push({
+                    test: 'Has analysis_results',
+                    status: 'fail',
+                    message: '✗ analysis_results is NULL or missing - VIDEO NOT ANALYZED!'
+                });
+            }
+
+            // Display verification table
+            let html = '<h3>VERIFICATION RESULTS:</h3><table><tr><th>Test</th><th>Status</th><th>Details</th></tr>';
+            
+            checks.forEach(check => {
+                html += `
+                    <tr>
+                        <td>${check.test}</td>
+                        <td><span class="status ${check.status}">${check.status.toUpperCase()}</span></td>
+                        <td>${check.message}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</table>';
+
+            // Summary
+            const passed = checks.filter(c => c.status === 'pass').length;
+            const failed = checks.filter(c => c.status === 'fail').length;
+            const warnings = checks.filter(c => c.status === 'warn').length;
+
+            html += `<br><br><strong>SUMMARY:</strong>`;
+            html += `<br><span class="success">✓ PASSED: ${passed}</span>`;
+            html += `<br><span class="error">✗ FAILED: ${failed}</span>`;
+            html += `<br><span class="warning">⚠ WARNINGS: ${warnings}</span>`;
+
+            if (failed === 0 && passed >= 4) {
+                html += `<br><br><span class="status pass">🎉 YOLO8 ANALYSIS WORKING CORRECTLY!</span>`;
+            } else if (failed > 0) {
+                html += `<br><br><span class="status fail">❌ YOLO8 ANALYSIS HAS ISSUES - SEE FAILURES ABOVE</span>`;
+            }
+
+            verifyDiv.innerHTML = html;
+        }
+
+        // Auto-load token if exists
+        window.onload = function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                authToken = token;
+                document.getElementById('loginResult').style.display = 'block';
+                document.getElementById('loginResult').innerHTML = `
+                    <span class="success">✓ Token loaded from storage</span>
+                    <br><br><span class="status pass">READY TO TEST</span>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
