@@ -1297,33 +1297,33 @@
                 alert('Failed to load available videos');
             }
         }
-
-        function displayAvailableVideos() {
-        const grid = document.getElementById('videoSelectionGrid');
-        
-        if (availableVideos.length === 0) {
-            grid.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #718096;">
-                    <p style="font-size: 1.2em;">No exercises available</p>
-                    <p style="font-size: 0.95em;">Seed demo videos first by calling POST /api/demos/seed</p>
-                </div>
-            `;
-            return;
-        }
-        
-        grid.innerHTML = availableVideos.map(video => `
-            <div class="video-option">
-                <div>
-                    <div class="video-option-title">${video.title}</div>
-                    <div class="video-option-type">🏋️ ${video.exercise_type.toUpperCase()}</div>
-                </div>
-                <button class="btn-assign" onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}')">
-                    Assign
-                </button>
-            </div>
-        `).join('');
-    }
-        
+            function displayAvailableVideos() {
+                const grid = document.getElementById('videoSelectionGrid');
+                
+                if (availableVideos.length === 0) {
+                    grid.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #718096;">
+                            <p>No exercises available</p>
+                            <p style="font-size: 0.9em;">Call POST /api/demos/seed to add demo videos</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = availableVideos.map(video => `
+                    <div class="video-option">
+                        <div>
+                            <div class="video-option-title">${video.title}</div>
+                            <div class="video-option-type">🏋️ ${video.exercise_type.toUpperCase()}</div>
+                        </div>
+                        <button class="btn-assign" onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}')">
+                            Assign
+                        </button>
+                    </div>
+                `).join('');
+            }
+                 
+                    
         function assignExercise(demoVideoId, videoTitle) {
             if (!confirm(`Assign "${videoTitle}" to ${document.getElementById('assignPatientName').textContent}?`)) {
                 return;
