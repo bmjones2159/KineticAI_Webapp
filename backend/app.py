@@ -21,7 +21,8 @@ from logging.handlers import RotatingFileHandler
 import json
 
 # Initialize Flask app with static file serving
-app = Flask(__name__, static_folder='static', static_url_path='')
+STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='/static')
 CORS(app, resources={
     r"/api/*": {
         "origins": "*",
@@ -353,14 +354,35 @@ def format_ai_suggestions(raw_issues, exercise_type, form_score):
 @app.route('/')
 def index():
     """Serve the login page"""
-    return send_from_directory('static', 'login.html')
+    try:
+        return send_from_directory(app.static_folder or 'static', 'login.html')
+    except Exception as e:
+        return jsonify({'error': f'Could not load login page: {str(e)}', 'static_folder': app.static_folder}), 500
 
-@app.route('/<path:filename>')
-def serve_static(filename):
-    """Serve static HTML files"""
-    if filename.endswith('.html'):
-        return send_from_directory('static', filename)
-    return send_from_directory('static', filename)
+@app.route('/login.html')
+def serve_login():
+    """Serve login page"""
+    return send_from_directory(app.static_folder or 'static', 'login.html')
+
+@app.route('/patient-dashboard.html')
+def serve_patient_dashboard():
+    """Serve patient dashboard"""
+    return send_from_directory(app.static_folder or 'static', 'patient-dashboard.html')
+
+@app.route('/therapist-patients.html')
+def serve_therapist_patients():
+    """Serve therapist patients page"""
+    return send_from_directory(app.static_folder or 'static', 'therapist-patients.html')
+
+@app.route('/therapist-reviews.html')
+def serve_therapist_reviews():
+    """Serve therapist reviews page"""
+    return send_from_directory(app.static_folder or 'static', 'therapist-reviews.html')
+
+@app.route('/logo.png')
+def serve_logo():
+    """Serve logo"""
+    return send_from_directory(app.static_folder or 'static', 'logo.png')
 
 @app.route('/api/status')
 def api_status():
@@ -369,6 +391,25 @@ def api_status():
         'message': 'Kinetic AI Video Analysis API',
         'version': '2.0.0',
         'status': 'running'
+    })
+
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy'})
+
+@app.route('/api/debug/static')
+def debug_static():
+    """Debug endpoint to check static file configuration"""
+    static_folder = app.static_folder
+    files = []
+    if static_folder and os.path.exists(static_folder):
+        files = os.listdir(static_folder)
+    return jsonify({
+        'static_folder': static_folder,
+        'exists': os.path.exists(static_folder) if static_folder else False,
+        'files': files,
+        'cwd': os.getcwd()
     })
 
 @app.route('/api/auth/register', methods=['POST'])
