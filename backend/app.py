@@ -250,6 +250,23 @@ class ExerciseVideoAssignment(db.Model):
     therapist = db.relationship('User', foreign_keys=[therapist_id], backref='exercise_assignments_created')
     video = db.relationship('Video', backref='exercise_assignments')
 
+class Appointment(db.Model):
+    """Therapist-patient appointments for calendar"""
+    __tablename__ = 'appointments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    therapist_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    scheduled_time = db.Column(db.DateTime, nullable=False)
+    type = db.Column(db.String(50), default='in_person')
+    duration = db.Column(db.Integer, default=60)
+    notes = db.Column(db.Text)
+    status = db.Column(db.String(20), default='scheduled')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    therapist = db.relationship('User', foreign_keys=[therapist_id], backref='therapist_appointments')
+    patient = db.relationship('User', foreign_keys=[patient_id], backref='patient_appointments')
+    
 # Utility functions
 def log_audit(user_id, action, resource_type=None, resource_id=None, details=None, success=True):
     try:
@@ -558,11 +575,12 @@ def assign_exercise_video():
         demo_video = DemoVideo.query.get(demo_video_id)
         if not demo_video or not demo_video.is_active:
             return jsonify({'error': 'Demo video not found'}), 404
-        
-        # Create assignment
+      
+         # Create assignment
         assignment = ExerciseVideoAssignment(
             patient_id=patient_id,
             therapist_id=current_user_id,
+            demo_video_id=demo_video_id,  # FIXED: Set demo_video_id
             video_id=None,  # No user video for demo assignments
             exercise_type=demo_video.exercise_type,
             target_reps=data.get('target_reps', 12),
@@ -736,6 +754,8 @@ def mark_assignment_complete(assignment_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/therapist/available-exercise-videos', methods=['GET'])
 @jwt_required()
 def get_available_exercise_videos():
@@ -1172,6 +1192,78 @@ def add_therapist_note():
         return jsonify({'message': 'Note added successfully', 'note_id': note.id}), 201
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/therapist/appointments', methods=['POST'])
+@jwt_required()
+def create_appointment():
+    """Schedule a new appointment"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can schedule appointments'}), 403
+        
+        data = request.get_json()
+        
+        appointment = Appointment(
+            therapist_id=current_user_id,
+            patient_id=data['patient_id'],
+            scheduled_time=datetime.fromisoformat(data['scheduled_time']),
+            type=data.get('type', 'in_person'),
+            duration=data.get('duration', 60),
+            notes=data.get('notes'),
+            status='scheduled'
+        )
+        
+        db.session.add(appointment)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Appointment scheduled',
+            'appointment_id': appointment.id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/therapist/appointments', methods=['GET'])
+@jwt_required()
+def get_appointments():
+    """Get therapist's appointments"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can view appointments'}), 403
+        
+        appointments = Appointment.query.filter_by(
+            therapist_id=current_user_id
+        ).order_by(Appointment.scheduled_time).all()
+        
+        result = []
+        for apt in appointments:
+            patient = User.query.get(apt.patient_id)
+            patient_profile = PatientProfile.query.filter_by(user_id=apt.patient_id).first()
+            
+            result.append({
+                'id': apt.id,
+                'patient_id': apt.patient_id,
+                'patient_name': patient_profile.full_name if patient_profile else patient.username,
+                'scheduled_time': apt.scheduled_time.isoformat(),
+                'type': apt.type,
+                'duration': apt.duration,
+                'notes': apt.notes,
+                'status': apt.status
+            })
+        
+        return jsonify({'appointments': result}), 200
+        
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/demos', methods=['GET'])
@@ -2295,59 +2387,8 @@ def add_workout_feedback(workout_id):
         logger.error(f"Error adding feedback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-    @app.route('/api/therapist/appointments', methods=['POST'])
-    @jwt_required()
-    def create_appointment():
-        data = request.get_json()
-        
-        appointment = Appointment(
-            therapist_id=current_user_id,
-            patient_id=data['patient_id'],
-            scheduled_time=datetime.fromisoformat(data['scheduled_time']),
-            type=data['type'],
-            notes=data.get('notes'),
-            status='scheduled'
-        )
-        
-        db.session.add(appointment)
-        db.session.commit()
-        
-        return jsonify({'message': 'Appointment scheduled'}), 201
+   
 
-        @app.route('/api/therapist/appointments', methods=['POST'])
-@jwt_required()
-def create_appointment():
-    """Schedule a new appointment"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Only therapists can schedule appointments'}), 403
-        
-        data = request.get_json()
-        
-        appointment = Appointment(
-            therapist_id=current_user_id,
-            patient_id=data['patient_id'],
-            scheduled_time=datetime.fromisoformat(data['scheduled_time']),
-            type=data.get('type', 'in_person'),
-            duration=data.get('duration', 60),
-            notes=data.get('notes'),
-            status='scheduled'
-        )
-        
-        db.session.add(appointment)
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Appointment scheduled',
-            'appointment_id': appointment.id
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/therapist/appointments', methods=['GET'])
