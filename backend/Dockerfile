@@ -1,36 +1,33 @@
+# KineticAI Dockerfile
 FROM python:3.10-slim
 
-# Install system dependencies (minimal set)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
     libgl1 \
     libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
+# Copy requirements and install dependencies
 COPY backend/requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy backend (includes static/ folder with HTML files)
 COPY backend/ .
 
-# Copy frontend files explicitly to /app/frontend/
-COPY frontend/ /app/frontend/
+# Create uploads directory
+RUN mkdir -p /tmp/uploads
 
-# Verify files were copied (for debugging)
-RUN ls -la /app/frontend/ || echo "Frontend directory not found!"
-
-# Create necessary directories
-RUN mkdir -p /encrypted_storage/videos /app/logs && \
-    chmod -R 755 /app
 # Expose port
-EXPOSE 5000
+EXPOSE 10000
 
-# Run with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "2", "--timeout", "300", "--max-requests", "1000", "--max-requests-jitter", "50", "app:app"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:10000/api/health || exit 1
+
+# Run with gunicorn
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000", "--workers", "2", "--timeout", "120"]
