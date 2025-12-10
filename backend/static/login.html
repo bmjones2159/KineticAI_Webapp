@@ -9,8 +9,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #4A1D6A;
-            --primary-light: #6B2D8B;
+            --primary: #2D1B4E;
+            --primary-light: #3D2A5E;
+            --primary-dark: #1F1335;
             --accent: #D4AF37;
             --accent-light: #E5C55A;
         }
@@ -288,17 +289,34 @@
             }
         }
 
-        // Check if already logged in
-        document.addEventListener('DOMContentLoaded', function() {
+        // Check if already logged in - validate token first
+        document.addEventListener('DOMContentLoaded', async function() {
             const token = localStorage.getItem('token');
             const user = localStorage.getItem('user');
             
             if (token && user) {
-                const userData = JSON.parse(user);
-                if (userData.role === 'clinician' || userData.role === 'admin') {
-                    window.location.href = 'therapist-patients.html';
-                } else {
-                    window.location.href = 'patient-dashboard.html';
+                try {
+                    // Validate token with server
+                    const response = await fetch(`${API_URL}/api/auth/me`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const userData = JSON.parse(user);
+                        if (userData.role === 'clinician' || userData.role === 'admin') {
+                            window.location.href = 'therapist-patients.html';
+                        } else {
+                            window.location.href = 'patient-dashboard.html';
+                        }
+                    } else {
+                        // Token invalid, clear it
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                    }
+                } catch (error) {
+                    // Network error or invalid token
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
                 }
             }
         });
