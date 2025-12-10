@@ -9,8 +9,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #4A1D6A;
-            --primary-light: #6B2D8B;
+            --primary: #2D1B4E;
+            --primary-light: #3D2A5E;
+            --primary-dark: #1F1335;
             --accent: #D4AF37;
             --accent-light: #E5C55A;
             --success: #10b981;
@@ -314,7 +315,7 @@
         }
         
         .list-item.active {
-            background: #f5f0f9;
+            background: #E8E4F0;
             border-left: 3px solid var(--primary);
         }
         
@@ -560,7 +561,7 @@
         }
         
         .existing-feedback {
-            background: #f5f0f9;
+            background: #E8E4F0;
             border-radius: 0.5rem;
             padding: 1rem;
             margin-bottom: 1rem;
@@ -854,9 +855,29 @@
         });
 
         function checkAuth() {
-            if (!token) {
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
                 window.location.href = 'login.html';
+                return false;
             }
+            
+            // Check role
+            try {
+                const userData = JSON.parse(user);
+                if (userData.role !== 'clinician' && userData.role !== 'admin') {
+                    // Not a therapist, redirect to patient dashboard
+                    window.location.href = 'patient-dashboard.html';
+                    return false;
+                }
+            } catch (e) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            return true;
         }
 
         function switchTab(tab, btn) {
@@ -890,6 +911,7 @@
                 const count = data.pending_count || suggestions.length;
                 document.getElementById('pendingCount').textContent = count;
                 document.getElementById('pendingBadge').textContent = count;
+                document.getElementById('totalWeek').textContent = data.reviewed_this_week || 0;
                 
                 if (count > 0) {
                     document.getElementById('navBadge').textContent = count;
@@ -1088,8 +1110,13 @@
                 showToast(`Suggestions ${status}!`, 'success');
                 
                 // Update counts
-                const approvedCount = parseInt(document.getElementById('approvedToday').textContent) + 1;
-                document.getElementById('approvedToday').textContent = status !== 'rejected' ? approvedCount : document.getElementById('approvedToday').textContent;
+                if (status !== 'rejected') {
+                    const approvedCount = parseInt(document.getElementById('approvedToday').textContent) + 1;
+                    document.getElementById('approvedToday').textContent = approvedCount;
+                    
+                    const weekCount = parseInt(document.getElementById('totalWeek').textContent) + 1;
+                    document.getElementById('totalWeek').textContent = weekCount;
+                }
                 
                 // Remove from list and refresh
                 suggestions = suggestions.filter(s => s.id !== suggestionId);
@@ -1097,6 +1124,15 @@
                 
                 document.getElementById('pendingCount').textContent = suggestions.length;
                 document.getElementById('pendingBadge').textContent = suggestions.length;
+                
+                // Update nav badge too
+                const navBadge = document.getElementById('navBadge');
+                if (suggestions.length > 0) {
+                    navBadge.textContent = suggestions.length;
+                    navBadge.style.display = 'inline';
+                } else {
+                    navBadge.style.display = 'none';
+                }
                 
                 renderSuggestionsList();
                 document.getElementById('suggestionDetail').innerHTML = `
