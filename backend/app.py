@@ -765,7 +765,6 @@ def mark_assignment_complete(assignment_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
 @app.route('/api/therapist/available-exercise-videos', methods=['GET'])
 @jwt_required()
 def get_available_exercise_videos():
@@ -777,7 +776,7 @@ def get_available_exercise_videos():
         if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Get demo videos from the library
+        # Get demo videos from the library (NOT user videos)
         demo_videos = DemoVideo.query.filter_by(is_active=True).all()
         
         result = []
@@ -798,6 +797,7 @@ def get_available_exercise_videos():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 # Continue with remaining endpoints...
 @app.route('/api/therapist/patients', methods=['POST'])
