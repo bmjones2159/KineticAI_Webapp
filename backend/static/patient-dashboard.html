@@ -930,6 +930,19 @@
                             </div>
                         </div>
 
+                        ${ex.demo_video_url ? `
+                            <div style="margin: 1rem 0;">
+                                <img src="${ex.demo_thumbnail_url || 'https://via.placeholder.com/300x169?text=' + exerciseType}" 
+                                     style="width: 100%; border-radius: 0.5rem; cursor: pointer;"
+                                     onclick="openDemoVideo('${ex.demo_video_url}', '${ex.demo_title || exerciseType}')"
+                                     alt="${ex.demo_title || 'Demo video'}">
+                                <button class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;"
+                                        onclick="openDemoVideo('${ex.demo_video_url}', '${ex.demo_title || exerciseType}')">
+                                    ▶️ Watch Demo Video
+                                </button>
+                            </div>
+                        ` : ''}
+
                         ${ex.instructions ? `
                             <div style="margin: 1rem 0; font-size: 0.875rem; color: var(--gray-600); background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem;">
                                 📝 ${ex.instructions}
@@ -1267,6 +1280,41 @@
         function logout() {
             localStorage.removeItem('token');
             window.location.href = 'login.html';
+        }
+
+        // Demo video preview
+        function openDemoVideo(videoUrl, title) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('demoVideoModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'demoVideoModal';
+                modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:2000;display:flex;align-items:center;justify-content:center;';
+                modal.innerHTML = `
+                    <div style="width:90%;max-width:900px;position:relative;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <span style="color:white;font-size:1.25rem;font-weight:600;" id="demoVideoTitle">Demo Video</span>
+                            <button onclick="closeDemoVideo()" style="background:none;border:none;color:white;font-size:2rem;cursor:pointer;">&times;</button>
+                        </div>
+                        <iframe id="demoVideoFrame" style="width:100%;aspect-ratio:16/9;border-radius:0.5rem;border:none;" 
+                                src="" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+                    </div>
+                `;
+                modal.onclick = (e) => { if (e.target === modal) closeDemoVideo(); };
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('demoVideoTitle').textContent = title;
+            document.getElementById('demoVideoFrame').src = videoUrl + '?autoplay=1';
+            modal.style.display = 'flex';
+        }
+
+        function closeDemoVideo() {
+            const modal = document.getElementById('demoVideoModal');
+            if (modal) {
+                document.getElementById('demoVideoFrame').src = '';
+                modal.style.display = 'none';
+            }
         }
 
         // Close modal on outside click
