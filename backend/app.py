@@ -987,12 +987,18 @@ def get_patient_assigned_exercises():
         for assignment in assignments:
             video_info = None
             exercise_type = assignment.exercise_type or 'Exercise'
+            demo_video_url = None
+            demo_thumbnail_url = None
+            demo_title = None
             
             if assignment.demo_video_id:
                 demo = DemoVideo.query.get(assignment.demo_video_id)
                 if demo:
                     video_info = {'analysis_results': {'exercise_type': demo.exercise_type or exercise_type}}
                     exercise_type = demo.exercise_type or exercise_type
+                    demo_video_url = demo.video_url
+                    demo_thumbnail_url = demo.thumbnail_url
+                    demo_title = demo.title
             elif assignment.video_id:
                 video = Video.query.get(assignment.video_id)
                 if video and video.analysis_results:
@@ -1031,7 +1037,10 @@ def get_patient_assigned_exercises():
                 'assigned_at': assignment.assigned_at.isoformat(),
                 'times_completed': times_completed,
                 'last_completed': last_workout.completed_at.isoformat() if last_workout else None,
-                'video': video_info
+                'video': video_info,
+                'demo_video_url': demo_video_url,
+                'demo_thumbnail_url': demo_thumbnail_url,
+                'demo_title': demo_title
             })
         
         return jsonify(result), 200
