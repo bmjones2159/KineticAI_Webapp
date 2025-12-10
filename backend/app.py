@@ -413,6 +413,8 @@ def upload_video():
             user_id=current_user_id,
             filename=file.filename,
             encrypted_filename=safe_filename,
+            file_path=file_path,
+            uploaded_at=date.time.utcnow(),
             file_hash=file_hash,
             file_size=file_size,
             mime_type=file.content_type or f'video/{file_ext}'
@@ -1928,10 +1930,14 @@ def log_workout():
             notes=notes,
             difficulty_rating=difficulty_rating,
             video_id=video_id,
+            workout_date=datetime.utcnow().date(),
             form_score=analysis_results.get('form_score') if analysis_results else None
         )
         
         db.session.add(workout)
+        db.session.commit()
+
+        return jsonify({'message': 'Workout logged'}), 201
         
         # Update assignment progress if this was an assigned exercise
         assignment_updated = False
