@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Reviews - KineticAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #4A1D6A;
+            --primary-light: #6B2D8B;
+            --accent: #D4AF37;
+            --accent-light: #E5C55A;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(74, 29, 106, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: white;
+            text-decoration: none;
+        }
+        
+        .navbar-brand img {
+            height: 40px;
+            width: auto;
+        }
+        
+        .navbar-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        
+        .nav-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--danger);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+        
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .page-subtitle {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .tab-btn:hover {
+            background: var(--gray-100);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        
+        .tab-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            border-radius: 999px;
+            margin-left: 0.5rem;
+        }
+        
+        .tab-btn.active .tab-badge {
+            background: white;
+            color: var(--primary);
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+        }
+        
+        .stat-card.pending { border-left: 4px solid var(--warning); }
+        .stat-card.approved { border-left: 4px solid var(--success); }
+        .stat-card.total { border-left: 4px solid var(--primary); }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        /* Patient Selector */
+        .patient-selector {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .patient-selector label {
+            font-weight: 600;
+            color: var(--gray-700);
+            white-space: nowrap;
+        }
+        
+        .patient-selector select {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            max-width: 400px;
+        }
+        
+        .patient-selector select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 29, 106, 0.1);
+        }
+        
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* List Panel */
+        .list-panel {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+        }
+        
+        .list-header {
+            padding: 1rem 1.5rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+        
+        .list-body {
+            max-height: calc(100vh - 380px);
+            overflow-y: auto;
+        }
+        
+        /* List Items */
+        .list-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .list-item:hover {
+            background: var(--gray-50);
+        }
+        
+        .list-item.active {
+            background: #f5f0f9;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .list-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        
+        .list-item-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 0.9rem;
+        }
+        
+        .list-item-date {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        
+        .list-item-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            flex-wrap: wrap;
+        }
+        
+        .list-item-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .badge-video { background: #d1fae5; color: #065f46; }
+        .badge-no-video { background: #fee2e2; color: #991b1b; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-reviewed { background: #dbeafe; color: #1e40af; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        
+        /* Form Score */
+        .form-score {
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+        }
+        
+        .form-score.excellent { background: #d1fae5; color: #065f46; }
+        .form-score.good { background: #fef3c7; color: #92400e; }
+        .form-score.needs-work { background: #fee2e2; color: #991b1b; }
+        
+        /* Detail Panel */
+        .detail-panel {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+        }
+        
+        .detail-header {
+            padding: 1.5rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .detail-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+        
+        .detail-subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        .detail-body {
+            padding: 1.5rem;
+            max-height: calc(100vh - 380px);
+            overflow-y: auto;
+        }
+        
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-card {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        
+        .info-card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .info-card-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-transform: uppercase;
+        }
+        
+        /* Video Section */
+        .video-section {
+            background: var(--gray-900);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        
+        .video-player {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: black;
+        }
+        
+        .no-video {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 16/9;
+            color: var(--gray-400);
+            font-size: 1rem;
+        }
+        
+        /* AI Suggestions Section */
+        .suggestions-section {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .suggestion-item {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--gray-200);
+            position: relative;
+        }
+        
+        .suggestion-item.high { border-left: 3px solid var(--danger); }
+        .suggestion-item.medium { border-left: 3px solid var(--warning); }
+        .suggestion-item.low { border-left: 3px solid var(--success); }
+        
+        .suggestion-issue {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+            padding-right: 2rem;
+        }
+        
+        .suggestion-fix {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        .suggestion-checkbox {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        /* Recommendation Box */
+        .recommendation-box {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .recommendation-level {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+        
+        .recommendation-message {
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+        
+        /* Feedback Form */
+        .feedback-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+        }
+        
+        .feedback-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 1rem;
+        }
+        
+        .feedback-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 29, 106, 0.1);
+        }
+        
+        .existing-feedback {
+            background: #f5f0f9;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .existing-feedback-label {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-approve {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-approve:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        
+        .btn-reject {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-reject:hover {
+            background: #dc2626;
+        }
+        
+        .btn-modify {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-modify:hover {
+            background: var(--primary-light);
+        }
+        
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 29, 106, 0.3);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--gray-500);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-state-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 2rem;
+            color: var(--gray-500);
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--gray-200);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1001;
+            animation: slideIn 0.3s;
+        }
+        
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .navbar-nav { display: none; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+            .patient-selector { flex-direction: column; align-items: stretch; }
+            .patient-selector select { max-width: 100%; }
+            .action-buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="therapist-patients.html" class="navbar-brand">
+            <img src="logo.png" alt="KineticAI">
+        </a>
+        <div class="navbar-nav">
+            <a href="therapist-patients.html" class="nav-link">Patients</a>
+            <a href="therapist-reviews.html" class="nav-link active">
+                Reviews
+                <span class="nav-badge" id="navBadge" style="display: none;">0</span>
+            </a>
+        </div>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+    </nav>
+
+    <div class="container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">📋 Workout Reviews</h1>
+                <p class="page-subtitle">Review patient workouts and AI-generated suggestions</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('pending', this)">
+                🤖 AI Suggestions
+                <span class="tab-badge" id="pendingBadge">0</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('workouts', this)">
+                📊 Patient Workouts
+            </button>
+        </div>
+
+        <!-- Tab 1: AI Suggestions (Pending) -->
+        <div class="tab-content active" id="pendingTab">
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card pending">
+                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-value" id="pendingCount">--</div>
+                </div>
+                <div class="stat-card approved">
+                    <div class="stat-label">Approved Today</div>
+                    <div class="stat-value" id="approvedToday">0</div>
+                </div>
+                <div class="stat-card total">
+                    <div class="stat-label">Total This Week</div>
+                    <div class="stat-value" id="totalWeek">--</div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- List Panel -->
+                <div class="list-panel">
+                    <div class="list-header">📝 Pending AI Suggestions</div>
+                    <div class="list-body" id="suggestionsList">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <span>Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div class="detail-panel">
+                    <div id="suggestionDetail">
+                        <div class="empty-state" style="padding: 4rem;">
+                            <div class="empty-state-icon">👈</div>
+                            <div class="empty-state-title">Select a Suggestion</div>
+                            <p>Click on a suggestion from the list to review</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Patient Workouts -->
+        <div class="tab-content" id="workoutsTab">
+            <!-- Patient Selector -->
+            <div class="patient-selector">
+                <label>👤 Select Patient:</label>
+                <select id="patientSelect" onchange="loadPatientWorkouts()">
+                    <option value="">-- Choose a patient --</option>
+                </select>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid" id="workoutsContent" style="display: none;">
+                <!-- List Panel -->
+                <div class="list-panel">
+                    <div class="list-header">📊 Workout History</div>
+                    <div class="list-body" id="workoutsList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📊</div>
+                            <div class="empty-state-title">No Workouts</div>
+                            <p>Select a patient to view their workouts</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div class="detail-panel">
+                    <div id="workoutDetail">
+                        <div class="empty-state" style="padding: 4rem;">
+                            <div class="empty-state-icon">👈</div>
+                            <div class="empty-state-title">Select a Workout</div>
+                            <p>Click on a workout from the list to review</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        const token = localStorage.getItem('token');
+        
+        let suggestions = [];
+        let selectedSuggestionId = null;
+        let patients = [];
+        let workouts = [];
+        let selectedWorkoutId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            loadPendingSuggestions();
+            loadPatients();
+        });
+
+        function checkAuth() {
+            if (!token) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            if (tab === 'pending') {
+                document.getElementById('pendingTab').classList.add('active');
+            } else {
+                document.getElementById('workoutsTab').classList.add('active');
+            }
+        }
+
+        // =============================================
+        // AI SUGGESTIONS TAB
+        // =============================================
+
+        async function loadPendingSuggestions() {
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/suggestions/pending`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load suggestions');
+
+                const data = await response.json();
+                suggestions = data.suggestions || [];
+                
+                const count = data.pending_count || suggestions.length;
+                document.getElementById('pendingCount').textContent = count;
+                document.getElementById('pendingBadge').textContent = count;
+                
+                if (count > 0) {
+                    document.getElementById('navBadge').textContent = count;
+                    document.getElementById('navBadge').style.display = 'inline';
+                }
+
+                renderSuggestionsList();
+
+            } catch (error) {
+                console.error('Error loading suggestions:', error);
+                document.getElementById('suggestionsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Error</div>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSuggestionsList() {
+            const container = document.getElementById('suggestionsList');
+
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-title">All Caught Up!</div>
+                        <p>No pending suggestions to review</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = suggestions.map(sugg => {
+                const scoreClass = sugg.form_score >= 85 ? 'excellent' : sugg.form_score >= 70 ? 'good' : 'needs-work';
+                const date = new Date(sugg.workout_date || sugg.created_at).toLocaleDateString();
+                
+                return `
+                    <div class="list-item ${selectedSuggestionId === sugg.id ? 'active' : ''}" 
+                         onclick="selectSuggestion(${sugg.id})">
+                        <div class="list-item-header">
+                            <div class="list-item-title">${sugg.patient_name || 'Patient'}</div>
+                            <span class="form-score ${scoreClass}">${sugg.form_score || 0}%</span>
+                        </div>
+                        <div class="list-item-meta">
+                            <span>💪 ${sugg.exercise_type?.toUpperCase() || 'Exercise'}</span>
+                            <span>📅 ${date}</span>
+                            <span>🔄 ${sugg.detected_reps || 0} reps</span>
+                        </div>
+                        <div class="list-item-badges">
+                            <span class="badge badge-pending">⏳ Pending Review</span>
+                            ${sugg.video_id ? '<span class="badge badge-video">📹 Video</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectSuggestion(suggestionId) {
+            selectedSuggestionId = suggestionId;
+            const sugg = suggestions.find(s => s.id === suggestionId);
+            
+            if (!sugg) return;
+
+            // Update active state
+            document.querySelectorAll('#suggestionsList .list-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            renderSuggestionDetail(sugg);
+        }
+
+        function renderSuggestionDetail(sugg) {
+            const container = document.getElementById('suggestionDetail');
+            const aiSuggestions = sugg.ai_suggestions || [];
+            const recommendation = sugg.recommendation || {};
+            const scoreClass = sugg.form_score >= 85 ? 'excellent' : sugg.form_score >= 70 ? 'good' : 'needs-work';
+
+            container.innerHTML = `
+                <div class="detail-header">
+                    <div class="detail-title">${sugg.patient_name || 'Patient'} - ${sugg.exercise_type?.toUpperCase() || 'Exercise'}</div>
+                    <div class="detail-subtitle">
+                        ${new Date(sugg.workout_date || sugg.created_at).toLocaleDateString('en-US', { 
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                        })}
+                    </div>
+                </div>
+                
+                <div class="detail-body">
+                    <!-- Stats -->
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <div class="info-card-value form-score ${scoreClass}">${sugg.form_score || 0}%</div>
+                            <div class="info-card-label">Form Score</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-card-value">${sugg.detected_reps || 0}</div>
+                            <div class="info-card-label">Reps Detected</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-card-value">${aiSuggestions.length}</div>
+                            <div class="info-card-label">Suggestions</div>
+                        </div>
+                    </div>
+
+                    <!-- Video -->
+                    <div class="video-section">
+                        ${sugg.video_id ? `
+                            <video class="video-player" controls>
+                                <source src="${API_URL}/api/videos/${sugg.video_id}/stream?token=${token}" type="video/mp4">
+                            </video>
+                        ` : `
+                            <div class="no-video">📹 No video uploaded for this workout</div>
+                        `}
+                    </div>
+
+                    <!-- AI Suggestions -->
+                    ${aiSuggestions.length > 0 ? `
+                        <div class="suggestions-section">
+                            <div class="section-title">🤖 AI-Generated Suggestions</div>
+                            ${aiSuggestions.map((s, i) => `
+                                <div class="suggestion-item ${s.priority || 'medium'}">
+                                    <input type="checkbox" class="suggestion-checkbox" 
+                                           id="sugg-check-${sugg.id}-${i}"
+                                           data-index="${i}" checked>
+                                    <div class="suggestion-issue">⚠️ ${s.issue}</div>
+                                    <div class="suggestion-fix">💡 ${s.fix}</div>
+                                </div>
+                            `).join('')}
+                            
+                            ${recommendation.message ? `
+                                <div class="recommendation-box">
+                                    <div class="recommendation-level">${recommendation.level || 'Recommendation'}</div>
+                                    <div class="recommendation-message">${recommendation.message}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+
+                    <!-- Feedback Section -->
+                    <div class="feedback-section">
+                        <div class="section-title">📝 Therapist Notes</div>
+                        <textarea class="feedback-textarea" id="therapistNotes-${sugg.id}" 
+                                  placeholder="Add your notes or personalized feedback for the patient..."></textarea>
+                        
+                        <div class="action-buttons">
+                            <button class="btn btn-approve" onclick="reviewSuggestion(${sugg.id}, 'approved')">
+                                ✅ Approve All
+                            </button>
+                            <button class="btn btn-modify" onclick="reviewSuggestion(${sugg.id}, 'modified')">
+                                ✏️ Approve Selected
+                            </button>
+                            <button class="btn btn-reject" onclick="reviewSuggestion(${sugg.id}, 'rejected')">
+                                ❌ Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function reviewSuggestion(suggestionId, status) {
+            try {
+                const notes = document.getElementById(`therapistNotes-${suggestionId}`).value;
+                
+                let approvedSuggestions = null;
+                if (status === 'modified') {
+                    const sugg = suggestions.find(s => s.id === suggestionId);
+                    approvedSuggestions = [];
+                    const checkboxes = document.querySelectorAll(`[id^="sugg-check-${suggestionId}-"]`);
+                    checkboxes.forEach((cb) => {
+                        const index = parseInt(cb.dataset.index);
+                        if (cb.checked && sugg.ai_suggestions[index]) {
+                            approvedSuggestions.push(sugg.ai_suggestions[index]);
+                        }
+                    });
+                }
+
+                const response = await fetch(`${API_URL}/api/therapist/suggestions/${suggestionId}/review`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status,
+                        therapist_notes: notes,
+                        approved_suggestions: approvedSuggestions
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to submit review');
+
+                showToast(`Suggestions ${status}!`, 'success');
+                
+                // Update counts
+                const approvedCount = parseInt(document.getElementById('approvedToday').textContent) + 1;
+                document.getElementById('approvedToday').textContent = status !== 'rejected' ? approvedCount : document.getElementById('approvedToday').textContent;
+                
+                // Remove from list and refresh
+                suggestions = suggestions.filter(s => s.id !== suggestionId);
+                selectedSuggestionId = null;
+                
+                document.getElementById('pendingCount').textContent = suggestions.length;
+                document.getElementById('pendingBadge').textContent = suggestions.length;
+                
+                renderSuggestionsList();
+                document.getElementById('suggestionDetail').innerHTML = `
+                    <div class="empty-state" style="padding: 4rem;">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-title">Review Submitted</div>
+                        <p>Select another suggestion to continue</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error reviewing suggestion:', error);
+                showToast('Failed to submit review', 'error');
+            }
+        }
+
+        // =============================================
+        // PATIENT WORKOUTS TAB
+        // =============================================
+
+        async function loadPatients() {
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/patients`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load patients');
+
+                const data = await response.json();
+                patients = data.patients || [];
+
+                const select = document.getElementById('patientSelect');
+                select.innerHTML = '<option value="">-- Choose a patient --</option>' + 
+                    patients.map(p => `<option value="${p.user_id}">${p.full_name || p.username}</option>`).join('');
+
+            } catch (error) {
+                console.error('Error loading patients:', error);
+            }
+        }
+
+        async function loadPatientWorkouts() {
+            const patientId = document.getElementById('patientSelect').value;
+            
+            if (!patientId) {
+                document.getElementById('workoutsContent').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('workoutsContent').style.display = 'grid';
+            document.getElementById('workoutsList').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span>Loading workouts...</span>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}/workouts?limit=50`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load workouts');
+
+                const data = await response.json();
+                workouts = data.workouts || [];
+
+                renderWorkoutsList();
+
+            } catch (error) {
+                console.error('Error loading workouts:', error);
+                document.getElementById('workoutsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-title">Error</div>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderWorkoutsList() {
+            const container = document.getElementById('workoutsList');
+
+            if (!workouts || workouts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <div class="empty-state-title">No Workouts Yet</div>
+                        <p>This patient hasn't logged any workouts</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = workouts.map(w => {
+                const date = new Date(w.completed_at || w.workout_date);
+                const dateStr = date.toLocaleDateString();
+                const scoreClass = w.form_score >= 85 ? 'excellent' : w.form_score >= 70 ? 'good' : 'needs-work';
+                
+                return `
+                    <div class="list-item ${selectedWorkoutId === w.id ? 'active' : ''}" 
+                         onclick="selectWorkout(${w.id})">
+                        <div class="list-item-header">
+                            <div class="list-item-title">${w.exercise_type || 'Exercise'}</div>
+                            ${w.form_score ? `<span class="form-score ${scoreClass}">${w.form_score}%</span>` : ''}
+                        </div>
+                        <div class="list-item-meta">
+                            <span>📅 ${dateStr}</span>
+                            <span>💪 ${w.sets_completed || 0}×${w.reps_per_set || 0}</span>
+                        </div>
+                        <div class="list-item-badges">
+                            ${w.video_id ? '<span class="badge badge-video">📹 Video</span>' : '<span class="badge badge-no-video">No Video</span>'}
+                            ${w.therapist_reviewed ? '<span class="badge badge-reviewed">✓ Reviewed</span>' : '<span class="badge badge-pending">⏳ Pending</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectWorkout(workoutId) {
+            selectedWorkoutId = workoutId;
+            const workout = workouts.find(w => w.id === workoutId);
+            
+            if (!workout) return;
+
+            document.querySelectorAll('#workoutsList .list-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            renderWorkoutDetail(workout);
+        }
+
+        function renderWorkoutDetail(workout) {
+            const container = document.getElementById('workoutDetail');
+            const date = new Date(workout.completed_at || workout.workout_date);
+            const scoreClass = workout.form_score >= 85 ? 'excellent' : workout.form_score >= 70 ? 'good' : 'needs-work';
+
+            container.innerHTML = `
+                <div class="detail-header">
+                    <div class="detail-title">${workout.exercise_type || 'Workout'}</div>
+                    <div class="detail-subtitle">
+                        ${date.toLocaleDateString('en-US', { 
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        })}
+                    </div>
+                </div>
+                
+                <div class="detail-body">
+                    <!-- Stats -->
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <div class="info-card-value">${workout.sets_completed || 0}</div>
+                            <div class="info-card-label">Sets</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-card-value">${workout.reps_per_set || 0}</div>
+                            <div class="info-card-label">Reps/Set</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="info-card-value">${(workout.sets_completed || 0) * (workout.reps_per_set || 0)}</div>
+                            <div class="info-card-label">Total Reps</div>
+                        </div>
+                        ${workout.form_score ? `
+                        <div class="info-card">
+                            <div class="info-card-value form-score ${scoreClass}">${workout.form_score}%</div>
+                            <div class="info-card-label">Form Score</div>
+                        </div>
+                        ` : ''}
+                        ${workout.weight_lbs ? `
+                        <div class="info-card">
+                            <div class="info-card-value">${workout.weight_lbs}</div>
+                            <div class="info-card-label">Weight (lbs)</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Video -->
+                    <div class="video-section">
+                        ${workout.video_id ? `
+                            <video class="video-player" controls>
+                                <source src="${API_URL}/api/videos/${workout.video_id}/stream?token=${token}" type="video/mp4">
+                            </video>
+                        ` : `
+                            <div class="no-video">📹 No video uploaded for this workout</div>
+                        `}
+                    </div>
+
+                    <!-- Patient Notes -->
+                    ${workout.notes ? `
+                        <div class="suggestions-section">
+                            <div class="section-title">📝 Patient Notes</div>
+                            <p style="color: var(--gray-600);">${workout.notes}</p>
+                        </div>
+                    ` : ''}
+
+                    <!-- Feedback Section -->
+                    <div class="feedback-section">
+                        ${workout.therapist_reviewed && workout.therapist_feedback ? `
+                            <div class="existing-feedback">
+                                <div class="existing-feedback-label">Your Previous Feedback:</div>
+                                <p>${workout.therapist_feedback}</p>
+                            </div>
+                        ` : `
+                            <div class="section-title">📝 Add Feedback</div>
+                            <textarea class="feedback-textarea" id="workoutFeedback-${workout.id}" 
+                                      placeholder="Provide feedback on form, progress, recommendations..."></textarea>
+                            <div class="action-buttons">
+                                <button class="btn btn-primary" onclick="submitWorkoutFeedback(${workout.id})">
+                                    💾 Submit Feedback
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function submitWorkoutFeedback(workoutId) {
+            const feedback = document.getElementById(`workoutFeedback-${workoutId}`).value.trim();
+            
+            if (!feedback) {
+                showToast('Please enter feedback', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/workouts/${workoutId}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ feedback })
+                });
+
+                if (!response.ok) throw new Error('Failed to submit feedback');
+
+                showToast('Feedback submitted!', 'success');
+                
+                // Update the workout in memory
+                const workout = workouts.find(w => w.id === workoutId);
+                if (workout) {
+                    workout.therapist_reviewed = true;
+                    workout.therapist_feedback = feedback;
+                    renderWorkoutsList();
+                    renderWorkoutDetail(workout);
+                }
+
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                showToast('Failed to submit feedback', 'error');
+            }
+        }
+
+        // =============================================
+        // UTILITIES
+        // =============================================
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
+    </script>
+
+</body>
+</html>
