@@ -65,6 +65,28 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+# JWT Error Handlers - return proper JSON responses
+@jwt.invalid_token_loader
+def invalid_token_callback(error_string):
+    return jsonify({
+        'error': 'Invalid token',
+        'message': error_string
+    }), 401
+
+@jwt.unauthorized_loader
+def unauthorized_callback(error_string):
+    return jsonify({
+        'error': 'Missing authorization',
+        'message': 'Request does not contain an access token'
+    }), 401
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    return jsonify({
+        'error': 'Token expired',
+        'message': 'Please log in again'
+    }), 401
+
 # Create cipher suite with proper bytes key
 try:
     cipher_suite = Fernet(app.config['ENCRYPTION_KEY'])
