@@ -547,16 +547,7 @@ def assign_exercise_video():
         
         data = request.get_json()
         patient_id = data.get('patient_id')
-        video_id = data.get('video_id')
-        
-        patient_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
-        if not patient_profile:
-            return jsonify({'error': 'Patient not found'}), 404
-        
-        if user.role in ['clinician', 'admin'] and patient_profile.assigned_therapist_id != current_user_id:
-            return jsonify({'error': 'This patient is not assigned to you'}), 403
-        demo_video_id = data.get('demo_video_id')
-        
+       demo_video_id = data.get('demo_video_id')
         if not demo_video_id:
             return jsonify({'error': 'Demo video ID required'}), 400
         
@@ -567,8 +558,7 @@ def assign_exercise_video():
         assignment = ExerciseVideoAssignment(
             patient_id=patient_id,
             therapist_id=current_user_id,
-            demo_video_id=demo_video_id,
-            video_id=None,  # No user video, this is a demo assignment
+            video_id=None,  # No user video
             exercise_type=demo_video.exercise_type,
             target_reps=data.get('target_reps', 12),
             target_sets=data.get('target_sets', 3),
