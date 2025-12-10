@@ -771,7 +771,7 @@ def mark_assignment_complete(assignment_id):
 @app.route('/api/therapist/available-exercise-videos', methods=['GET'])
 @jwt_required()
 def get_available_exercise_videos():
-    """Get all analyzed videos that can be assigned as exercises"""
+    """Get demo videos that can be assigned as exercises"""
     try:
         current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
@@ -779,31 +779,22 @@ def get_available_exercise_videos():
         if user.role not in ['clinician', 'admin']:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        videos = Video.query.filter(
-            Video.is_deleted == False,
-            Video.analysis_results.isnot(None)
-        ).order_by(Video.uploaded_at.desc()).limit(100).all()
+        # Get demo videos from the library
+        demo_videos = DemoVideo.query.filter_by(is_active=True).all()
         
         result = []
-        for video in videos:
-            analysis = None
-            if video.analysis_results:
-                try:
-                    decrypted = decrypt_data(video.analysis_results)
-                    analysis = json.loads(decrypted) if isinstance(decrypted, str) else decrypted
-                except:
-                    pass
-            
-            if analysis:
-                result.append({
-                    'video_id': video.id,
-                    'filename': video.filename,
-                    'uploaded_at': video.uploaded_at.isoformat(),
-                    'exercise_type': analysis.get('exercise_type', 'unknown'),
-                    'total_reps': analysis.get('total_reps', 0),
-                    'form_score': analysis.get('average_accuracy', 0),
-                    'owner': video.owner.username
-                })
+        for demo in demo_videos:
+            result.append({
+                'demo_id': demo.id,
+                'title': demo.title,
+                'exercise_type': demo.exercise_type,
+                'description': demo.description,
+                'video_url': demo.video_url,
+                'thumbnail_url': demo.thumbnail_url,
+                'duration_seconds': demo.duration_seconds,
+                'difficulty_level': demo.difficulty_level,
+                'target_muscles': demo.target_muscles
+            })
         
         return jsonify({'videos': result}), 200
         
