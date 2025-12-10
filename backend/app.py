@@ -1485,6 +1485,49 @@ def create_demo_users():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/therapist/workouts/<int:workout_id>/feedback', methods=['POST'])
+@jwt_required()
+def add_workout_feedback(workout_id):
+    """Therapist adds manual feedback to a workout"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can add feedback'}), 403
+        
+        workout = WorkoutLog.query.get(workout_id)
+        if not workout:
+            return jsonify({'error': 'Workout not found'}), 404
+        
+        # Verify therapist has access to this patient
+        patient_profile = PatientProfile.query.filter_by(user_id=workout.patient_id).first()
+        if user.role == 'clinician' and patient_profile and patient_profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        data = request.get_json()
+        feedback = data.get('feedback')
+        
+        if not feedback:
+            return jsonify({'error': 'Feedback is required'}), 400
+        
+        workout.therapist_feedback = feedback
+        workout.therapist_reviewed = True
+        workout.reviewed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Feedback added successfully',
+            'workout_id': workout_id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error adding feedback: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
