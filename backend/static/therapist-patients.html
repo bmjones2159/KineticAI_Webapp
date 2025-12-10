@@ -718,12 +718,37 @@
             }
         }
 
+        // Helper function for authenticated requests
+        async function authFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return null;
+            }
+            
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                ...options.headers
+            };
+            
+            const response = await fetch(url, { ...options, headers });
+            
+            // If unauthorized, redirect to login
+            if (response.status === 401 || response.status === 422) {
+                console.error('Auth error, redirecting to login');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                return null;
+            }
+            
+            return response;
+        }
+
         async function loadPendingCount() {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/therapist/suggestions/pending`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await authFetch(`${API_URL}/api/therapist/suggestions/pending`);
+                if (!response) return;
                 
                 if (response.ok) {
                     const data = await response.json();
@@ -743,10 +768,8 @@
 
         async function loadPatients() {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/therapist/patients`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await authFetch(`${API_URL}/api/therapist/patients`);
+                if (!response) return;
 
                 if (!response.ok) throw new Error('Failed to load patients');
 
