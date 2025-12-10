@@ -2387,7 +2387,46 @@ def add_workout_feedback(workout_id):
         logger.error(f"Error adding feedback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-   
+   @app.route('/api/patient/assigned-exercises', methods=['GET'])
+@jwt_required()
+def get_patient_assigned_exercises():
+    """Patient gets their own assigned exercise videos"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        
+        assignments = ExerciseVideoAssignment.query.filter_by(
+            patient_id=current_user_id,
+            is_active=True
+        ).order_by(ExerciseVideoAssignment.assigned_at.desc()).all()
+        
+        result = []
+        for assignment in assignments:
+            # Get demo video details
+            video_filename = None
+            if assignment.demo_video_id:
+                demo = DemoVideo.query.get(assignment.demo_video_id)
+                if demo:
+                    video_filename = demo.title
+            
+            result.append({
+                'id': assignment.id,
+                'demo_video_id': assignment.demo_video_id,
+                'video_filename': video_filename or 'Unknown Exercise',
+                'exercise_type': assignment.exercise_type,
+                'target_reps': assignment.target_reps,
+                'target_sets': assignment.target_sets,
+                'frequency_per_week': assignment.frequency_per_week,
+                'instructions': assignment.instructions,
+                'due_date': assignment.due_date.isoformat() if assignment.due_date else None,
+                'completed': assignment.completed,
+                'assigned_at': assignment.assigned_at.isoformat()
+            })
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"Error getting assigned exercises: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 
