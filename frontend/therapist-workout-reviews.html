@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Workout Reviews - Therapist Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header .breadcrumb {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .header .breadcrumb a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            transition: background 0.2s;
+        }
+
+        .back-button:hover {
+            background: #2980b9;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 24px;
+        }
+
+        /* Timeline/List Section */
+        .timeline-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 24px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .timeline-section h2 {
+            color: #2c3e50;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .workout-item {
+            padding: 16px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .workout-item:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+            transform: translateX(4px);
+        }
+
+        .workout-item.active {
+            border-color: #3498db;
+            background: #ebf5fb;
+        }
+
+        .workout-item .date {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .workout-item .date::before {
+            content: '📅';
+        }
+
+        .workout-item .meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+
+        .workout-item .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.has-video {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .badge.no-video {
+            background: #fadbd8;
+            color: #c0392b;
+        }
+
+        .badge.reviewed {
+            background: #d6eaf8;
+            color: #2980b9;
+        }
+
+        .badge.pending {
+            background: #fcf3cf;
+            color: #f39c12;
+        }
+
+        /* Detail Section */
+        .detail-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 32px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+
+        .empty-state svg {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .workout-detail h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .info-card .label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .info-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .video-section {
+            margin: 32px 0;
+            padding: 24px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .video-section h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .no-video-message {
+            padding: 40px;
+            text-align: center;
+            color: #95a5a6;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+
+        .notes-section {
+            margin-top: 32px;
+        }
+
+        .notes-section h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        .patient-notes {
+            background: #fff9e6;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+            margin-bottom: 16px;
+        }
+
+        .patient-notes .label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .therapist-feedback {
+            background: #e8f8f5;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .feedback-form {
+            margin-top: 16px;
+        }
+
+        .feedback-form textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .feedback-form textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .feedback-form button {
+            margin-top: 12px;
+            padding: 12px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .feedback-form button:hover {
+            background: #229954;
+        }
+
+        .feedback-form button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-pill {
+            padding: 8px 16px;
+            background: #ecf0f1;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .stat-pill strong {
+            color: #2c3e50;
+            margin-left: 4px;
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-section {
+                max-height: 400px;
+            }
+        }
+
+        .form-score {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .form-score.excellent {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .form-score.good {
+            background: #d6eaf8;
+            color: #2980b9;
+        }
+
+        .form-score.fair {
+            background: #fcf3cf;
+            color: #f39c12;
+        }
+
+        .form-score.poor {
+            background: #fadbd8;
+            color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/therapist-patients.html" class="back-button">← Back to Patients</a>
+            <h1>Patient Workout Reviews</h1>
+            <div class="breadcrumb">
+                <a href="/therapist-dashboard.html">Dashboard</a> → 
+                <a href="/therapist-patients.html">Patients</a> → 
+                <span id="patientName">Loading...</span>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <!-- Timeline/List Section -->
+            <div class="timeline-section">
+                <h2>Workout History</h2>
+                <div class="stats-bar" id="statsBar">
+                    <div class="stat-pill">Total: <strong id="totalWorkouts">0</strong></div>
+                    <div class="stat-pill">With Video: <strong id="withVideo">0</strong></div>
+                </div>
+                <div id="workoutList" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading workouts...</p>
+                </div>
+            </div>
+
+            <!-- Detail Section -->
+            <div class="detail-section">
+                <div id="workoutDetail" class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <h3>Select a workout to view details</h3>
+                    <p>Click on any date in the timeline to see workout details and video</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_URL = window.location.origin;
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Get patient ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const patientId = urlParams.get('patient_id');
+
+        if (!patientId) {
+            alert('No patient selected');
+            window.location.href = '/therapist-patients.html';
+        }
+
+        let currentWorkouts = [];
+        let selectedWorkoutId = null;
+
+        // Load patient info and workouts
+        async function init() {
+            await loadPatientInfo();
+            await loadWorkouts();
+        }
+
+        async function loadPatientInfo() {
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('patientName').textContent = data.full_name || data.username;
+                } else {
+                    console.error('Failed to load patient info');
+                }
+            } catch (error) {
+                console.error('Error loading patient info:', error);
+            }
+        }
+
+        async function loadWorkouts() {
+            const workoutList = document.getElementById('workoutList');
+            workoutList.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading workouts...</p></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}/workouts?limit=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load workouts');
+                }
+
+                const data = await response.json();
+                currentWorkouts = data.workouts || [];
+
+                // Update stats
+                document.getElementById('totalWorkouts').textContent = currentWorkouts.length;
+                document.getElementById('withVideo').textContent = currentWorkouts.filter(w => w.video_id).length;
+
+                // Render workout list
+                renderWorkoutList(currentWorkouts);
+
+            } catch (error) {
+                console.error('Error loading workouts:', error);
+                workoutList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Failed to load workouts</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderWorkoutList(workouts) {
+            const workoutList = document.getElementById('workoutList');
+
+            if (workouts.length === 0) {
+                workoutList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No workouts yet</h3>
+                        <p>This patient hasn't logged any workouts</p>
+                    </div>
+                `;
+                return;
+            }
+
+            workoutList.innerHTML = workouts.map(workout => {
+                const date = new Date(workout.completed_at);
+                const dateStr = date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                const timeStr = date.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+
+                return `
+                    <div class="workout-item ${workout.id === selectedWorkoutId ? 'active' : ''}" 
+                         onclick="selectWorkout(${workout.id})">
+                        <div class="date">${dateStr}</div>
+                        <div style="margin: 8px 0;">
+                            <strong>${workout.exercise_type || 'Exercise'}</strong>
+                        </div>
+                        <div class="meta">
+                            <span>🕐 ${timeStr}</span>
+                            <span>💪 ${workout.total_reps || workout.sets_completed} reps</span>
+                            ${workout.form_score ? `<span>📊 ${Math.round(workout.form_score)}%</span>` : ''}
+                        </div>
+                        <div style="margin-top: 8px;">
+                            ${workout.video_id ? '<span class="badge has-video">📹 Has Video</span>' : '<span class="badge no-video">No Video</span>'}
+                            ${workout.therapist_reviewed ? '<span class="badge reviewed">✓ Reviewed</span>' : '<span class="badge pending">⏳ Pending</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectWorkout(workoutId) {
+            selectedWorkoutId = workoutId;
+            const workout = currentWorkouts.find(w => w.id === workoutId);
+            
+            if (!workout) return;
+
+            // Update active state in list
+            document.querySelectorAll('.workout-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Render workout details
+            renderWorkoutDetail(workout);
+        }
+
+        function renderWorkoutDetail(workout) {
+            const detailSection = document.getElementById('workoutDetail');
+            
+            const date = new Date(workout.completed_at);
+            const formattedDate = date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            let formScoreClass = 'fair';
+            if (workout.form_score >= 90) formScoreClass = 'excellent';
+            else if (workout.form_score >= 75) formScoreClass = 'good';
+            else if (workout.form_score < 60) formScoreClass = 'poor';
+
+            detailSection.innerHTML = `
+                <div class="workout-detail">
+                    <h2>${workout.exercise_type || 'Workout'} - ${formattedDate}</h2>
+
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <div class="label">Sets</div>
+                            <div class="value">${workout.sets_completed || 0}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="label">Reps per Set</div>
+                            <div class="value">${workout.reps_per_set || 0}</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="label">Total Reps</div>
+                            <div class="value">${workout.total_reps || (workout.sets_completed * workout.reps_per_set)}</div>
+                        </div>
+                        ${workout.weight_lbs ? `
+                        <div class="info-card">
+                            <div class="label">Weight</div>
+                            <div class="value">${workout.weight_lbs} lbs</div>
+                        </div>
+                        ` : ''}
+                        ${workout.duration_seconds ? `
+                        <div class="info-card">
+                            <div class="label">Duration</div>
+                            <div class="value">${Math.round(workout.duration_seconds / 60)} min</div>
+                        </div>
+                        ` : ''}
+                        ${workout.form_score ? `
+                        <div class="info-card">
+                            <div class="label">Form Score</div>
+                            <div class="value">
+                                <span class="form-score ${formScoreClass}">${Math.round(workout.form_score)}%</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${workout.video_id ? `
+                    <div class="video-section">
+                        <h3>📹 Patient Video</h3>
+                        <div class="video-container">
+                            <video controls>
+                                <source src="${API_URL}/api/videos/${workout.video_id}/stream?token=${token}" type="video/mp4">
+                                Your browser does not support video playback.
+                            </video>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="video-section">
+                        <div class="no-video-message">
+                            <h3>📹 No Video</h3>
+                            <p>Patient did not upload a video for this workout</p>
+                        </div>
+                    </div>
+                    `}
+
+                    <div class="notes-section">
+                        <h3>Notes & Feedback</h3>
+                        
+                        ${workout.notes ? `
+                        <div class="patient-notes">
+                            <div class="label">Patient Notes:</div>
+                            <p>${workout.notes}</p>
+                        </div>
+                        ` : ''}
+
+                        ${workout.therapist_reviewed && workout.therapist_feedback ? `
+                        <div class="therapist-feedback">
+                            <div class="label">Your Feedback:</div>
+                            <p>${workout.therapist_feedback}</p>
+                            <small style="color: #7f8c8d; margin-top: 8px; display: block;">
+                                Reviewed on ${new Date(workout.reviewed_at).toLocaleDateString()}
+                            </small>
+                        </div>
+                        ` : `
+                        <div class="feedback-form">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">
+                                Add Therapist Feedback:
+                            </label>
+                            <textarea id="feedbackText" placeholder="Provide feedback on form, progress, recommendations..."></textarea>
+                            <button onclick="submitFeedback(${workout.id})">Submit Feedback</button>
+                        </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function submitFeedback(workoutId) {
+            const feedbackText = document.getElementById('feedbackText').value.trim();
+            
+            if (!feedbackText) {
+                alert('Please enter feedback before submitting');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/therapist/workouts/${workoutId}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ feedback: feedbackText })
+                });
+
+                if (response.ok) {
+                    alert('Feedback submitted successfully!');
+                    // Reload the workout to show updated feedback
+                    await loadWorkouts();
+                    selectWorkout(workoutId);
+                } else {
+                    const error = await response.json();
+                    alert('Failed to submit feedback: ' + (error.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('Error submitting feedback. Please try again.');
+            }
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
