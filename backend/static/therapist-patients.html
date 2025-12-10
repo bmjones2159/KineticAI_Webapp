@@ -974,10 +974,8 @@
 
         async function loadDemoVideos() {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/therapist/available-exercise-videos`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await authFetch(`${API_URL}/api/therapist/available-exercise-videos`);
+                if (!response) return;
 
                 if (response.ok) {
                     const data = await response.json();
