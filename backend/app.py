@@ -922,6 +922,9 @@ def get_workout_history():
         if user.role != 'user':
             return jsonify({'error': 'Only patients can view workout history'}), 403
         
+        # Get total count first (before limit)
+        total_count = WorkoutLog.query.filter_by(patient_id=user_id).count()
+        
         query = WorkoutLog.query.filter_by(patient_id=user_id)
         
         exercise_type = request.args.get('exercise_type')
@@ -930,6 +933,9 @@ def get_workout_history():
         
         limit = request.args.get('limit', default=50, type=int)
         workouts = query.order_by(WorkoutLog.completed_at.desc()).limit(limit).all()
+        
+        # Get all workouts for accurate stats
+        all_workouts = WorkoutLog.query.filter_by(patient_id=user_id).all()
         
         workout_list = []
         for workout in workouts:
@@ -947,13 +953,14 @@ def get_workout_history():
                 'therapist_feedback': workout.therapist_feedback
             })
         
+        # Calculate summary from ALL workouts (not just limited)
         summary = {
-            'total_workouts': len(workouts),
+            'total_workouts': total_count,
             'avg_form_score': None,
-            'total_reps': sum(w.sets_completed * w.reps_per_set for w in workouts)
+            'total_reps': sum(w.sets_completed * w.reps_per_set for w in all_workouts)
         }
         
-        scores = [w.form_score for w in workouts if w.form_score]
+        scores = [w.form_score for w in all_workouts if w.form_score]
         if scores:
             summary['avg_form_score'] = round(sum(scores) / len(scores), 1)
         
@@ -1403,9 +1410,24 @@ def get_pending_suggestions():
                 'created_at': sugg.created_at.isoformat()
             })
         
+        # Get reviewed this week count
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        if user.role == 'admin':
+            reviewed_this_week = AISuggestion.query.filter(
+                AISuggestion.status.in_(['approved', 'modified']),
+                AISuggestion.reviewed_at >= week_ago
+            ).count()
+        else:
+            reviewed_this_week = AISuggestion.query.filter(
+                AISuggestion.patient_id.in_(patient_ids),
+                AISuggestion.status.in_(['approved', 'modified']),
+                AISuggestion.reviewed_at >= week_ago
+            ).count()
+        
         return jsonify({
             'success': True,
             'pending_count': len(result),
+            'reviewed_this_week': reviewed_this_week,
             'suggestions': result
         }), 200
         
