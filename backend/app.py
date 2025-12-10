@@ -96,8 +96,8 @@ class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)
     encrypted_filename = db.Column(db.String(255), nullable=False)
-    file_hash = db.Column(db.String(64), nullable=False)
     file_path = db.Column(db.String(500))
+    file_hash = db.Column(db.String(64), nullable=False)
     file_size = db.Column(db.Integer)
     mime_type = db.Column(db.String(50))
     patient_id = db.Column(db.String(100))
@@ -2391,41 +2391,7 @@ def add_workout_feedback(workout_id):
 
 
 
-@app.route('/api/therapist/appointments', methods=['GET'])
-@jwt_required()
-def get_appointments():
-    """Get therapist's appointments"""
-    try:
-        current_user_id = int(get_jwt_identity())
-        user = User.query.get(current_user_id)
-        
-        if user.role not in ['clinician', 'admin']:
-            return jsonify({'error': 'Only therapists can view appointments'}), 403
-        
-        appointments = Appointment.query.filter_by(
-            therapist_id=current_user_id
-        ).order_by(Appointment.scheduled_time).all()
-        
-        result = []
-        for apt in appointments:
-            patient = User.query.get(apt.patient_id)
-            patient_profile = PatientProfile.query.filter_by(user_id=apt.patient_id).first()
-            
-            result.append({
-                'id': apt.id,
-                'patient_id': apt.patient_id,
-                'patient_name': patient_profile.full_name if patient_profile else patient.username,
-                'scheduled_time': apt.scheduled_time.isoformat(),
-                'type': apt.type,
-                'duration': apt.duration,
-                'notes': apt.notes,
-                'status': apt.status
-            })
-        
-        return jsonify({'appointments': result}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':
