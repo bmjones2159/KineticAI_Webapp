@@ -549,7 +549,7 @@ def assign_exercise_video():
         
         data = request.get_json()
         patient_id = data.get('patient_id')
-       demo_video_id = data.get('demo_video_id')
+        demo_video_id = data.get('demo_video_id')
         if not demo_video_id:
             return jsonify({'error': 'Demo video ID required'}), 400
         
@@ -557,23 +557,22 @@ def assign_exercise_video():
         if not demo_video or not demo_video.is_active:
             return jsonify({'error': 'Demo video not found'}), 404
         
+        # Create assignment
         assignment = ExerciseVideoAssignment(
             patient_id=patient_id,
             therapist_id=current_user_id,
-            video_id=None,  # No user video
+            video_id=None,  # No user video for demo assignments
             exercise_type=demo_video.exercise_type,
             target_reps=data.get('target_reps', 12),
             target_sets=data.get('target_sets', 3),
             frequency_per_week=data.get('frequency_per_week', 3),
             instructions=data.get('instructions', ''),
-            due_date=datetime.strptime(data.get('due_date'), '%Y-%m-%d').date() if data.get('due_date') else None
+            due_date=datetime.strptime(data.get('due_date'), '%Y-%m-%d').date() if data.get('due_date') else None,
+            assigned_at=datetime.utcnow()
         )
         
         db.session.add(assignment)
         db.session.commit()
-        
-        log_audit(current_user_id, 'EXERCISE_VIDEO_ASSIGNED', 'ExerciseVideoAssignment', 
-                 assignment.id, details=f"Assigned video {video_id} to patient {patient_id}")
         
         return jsonify({
             'message': 'Exercise video assigned successfully',
@@ -584,7 +583,6 @@ def assign_exercise_video():
         
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error assigning exercise video: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/therapist/patients/<int:patient_id>/assigned-videos', methods=['GET'])
