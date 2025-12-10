@@ -704,49 +704,53 @@
 }
 
 .video-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     border: 2px solid #e2e8f0;
-    padding: 15px;
-    border-radius: 8px;
-    cursor: pointer;
+    padding: 20px;
+    border-radius: 12px;
+    background: white;
     transition: all 0.3s;
 }
 
 .video-option:hover {
     border-color: #805ad5;
-    background: #f7fafc;
-}
-
-.video-option.selected {
-    border-color: #805ad5;
-    background: #f7f3ff;
-}
-
-.video-option-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.1);
 }
 
 .video-option-title {
+    font-size: 1.2em;
     font-weight: 600;
     color: #2d3748;
 }
 
-.video-option-score {
-    background: #48bb78;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.9em;
+.video-option-type {
+    font-size: 0.95em;
+    color: #718096;
+    margin-top: 5px;
 }
 
-.video-option-details {
-    display: flex;
-    gap: 15px;
-    font-size: 0.9em;
-    color: #718096;
+.btn-assign {
+    background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
 }
+
+.btn-assign:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.3);
+}
+
+.btn-assign:active {
+    transform: translateY(0);
+}
+
 
 .assignment-form {
     display: grid;
@@ -993,17 +997,34 @@
     </div>
 
 <!-- Assignment Modal -->
-<div id="assignExerciseModal" class="assign-exercise-modal">
-    <div class="assign-exercise-content">
-        <!-- Header with Close Button -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #805ad5;">
-            <h2 style="margin: 0;">📋 Assign Exercise Video</h2>
-            <button onclick="closeAssignExerciseModal()" 
-                style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666; padding: 0; width: 40px; height: 40px; transition: all 0.3s;"
-                onmouseover="this.style.color='#333'; this.style.transform='scale(1.2)'"
-                onmouseout="this.style.color='#666'; this.style.transform='scale(1)'">
-                ×
-            </button>
+                <div id="assignExerciseModal" class="assign-exercise-modal">
+            <div class="assign-exercise-content">
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #805ad5;">
+                    <h2 style="margin: 0;">📋 Assign Exercise</h2>
+                    <button onclick="closeAssignExerciseModal()" 
+                        style="font-size: 2em; background: none; border: none; cursor: pointer; color: #666; padding: 0; width: 40px; height: 40px;">
+                        ×
+                    </button>
+                </div>
+                
+                <p style="color: #718096; margin-bottom: 30px; font-size: 1.1em;">
+                    Select an exercise to assign to <strong id="assignPatientName"></strong>
+                </p>
+                
+                <!-- Exercise List -->
+                <div id="videoSelectionGrid" style="display: grid; gap: 15px; max-height: 500px; overflow-y: auto;">
+                    <!-- Populated by JavaScript -->
+                </div>
+                
+                <!-- Close Button -->
+                <div style="margin-top: 25px; text-align: right;">
+                    <button class="btn" onclick="closeAssignExerciseModal()" 
+                        style="background: #e2e8f0; color: #2d3748; padding: 12px 30px;">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
         <p style="color: #718096; margin-bottom: 20px;">Assign this video as exercise homework for <strong id="assignPatientName"></strong></p>
         
@@ -1277,33 +1298,84 @@
             }
         }
 
-            function displayAvailableVideos() {
-                const grid = document.getElementById('videoSelectionGrid');
-                
-                if (availableVideos.length === 0) {
-                    grid.innerHTML = '<p style="text-align: center; color: #718096;">No demo videos available. Please seed demo videos first.</p>';
-                    return;
-                }
-                
-                grid.innerHTML = availableVideos.map(video => `
-                    <div class="video-option ${selectedVideoForAssignment === video.demo_id ? 'selected' : ''}" 
-                        onclick="selectVideoForAssignment(${video.demo_id})">
-                        <div class="video-option-header">
-                            <span class="video-option-title">${video.title}</span>
-                            <span class="video-option-score" style="background: #10b981;">${video.difficulty_level}</span>
-                        </div>
-                        <div class="video-option-details">
-                            <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
-                            <span>🎯 ${video.target_muscles}</span>
-                            <span>⏱️ ${Math.floor(video.duration_seconds / 60)}min</span>
-                        </div>
-                        <div style="font-size: 0.85em; color: #718096; margin-top: 8px;">
-                            ${video.description}
-                        </div>
-                    </div>
-                `).join('');
+        function displayAvailableVideos() {
+        const grid = document.getElementById('videoSelectionGrid');
+        
+        if (availableVideos.length === 0) {
+            grid.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #718096;">
+                    <p style="font-size: 1.2em;">No exercises available</p>
+                    <p style="font-size: 0.95em;">Seed demo videos first by calling POST /api/demos/seed</p>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = availableVideos.map(video => `
+            <div class="video-option">
+                <div>
+                    <div class="video-option-title">${video.title}</div>
+                    <div class="video-option-type">🏋️ ${video.exercise_type.toUpperCase()}</div>
+                </div>
+                <button class="btn-assign" onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}')">
+                    Assign
+                </button>
+            </div>
+        `).join('');
+    }
+        
+        function assignExercise(demoVideoId, videoTitle) {
+            if (!confirm(`Assign "${videoTitle}" to ${document.getElementById('assignPatientName').textContent}?`)) {
+                return;
             }
+            
+            const token = localStorage.getItem('token');
+            
+            // Show loading state
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Assigning...';
+            btn.disabled = true;
+            
+            fetch(`${API_URL}/api/therapist/assign-exercise-video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    patient_id: currentAssignmentPatientId,
+                    demo_video_id: demoVideoId,
+                    target_reps: 12,  // Default values
+                    target_sets: 3,
+                    frequency_per_week: 3,
+                    instructions: ''
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('✓ Exercise assigned successfully!');
+                    closeAssignExerciseModal();
+                } else {
+                    throw new Error(data.error || 'Failed to assign');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to assign exercise: ' + error.message);
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
+        
+        function closeAssignExerciseModal() {
+            document.getElementById('assignExerciseModal').style.display = 'none';
+            currentAssignmentPatientId = null;
+        }
 
+
+        
         function selectVideoForAssignment(demoVideoId) {
             selectedVideoForAssignment = demoVideoId;
             displayAvailableVideos();
