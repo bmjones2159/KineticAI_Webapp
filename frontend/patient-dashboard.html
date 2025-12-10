@@ -893,7 +893,7 @@
 
     <script>
         // Configuration
-        const API_URL = 'window.location.origin'; // Update this!
+        const API_URL = 'YOUR_BACKEND_URL'; // Update this!
         
         let currentUser = null;
         let currentAssignment = null;
@@ -1358,24 +1358,10 @@
             }
         }
 
-function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/index.html';
-            }
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
         }
-        
-        // Add event listeners for logout buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            const logoutButtons = document.querySelectorAll('.logout-btn, #logoutBtn');
-            logoutButtons.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    logout();
-                });
-            });
-        });
 
         // Close modals on outside click
         document.querySelectorAll('.modal').forEach(modal => {
