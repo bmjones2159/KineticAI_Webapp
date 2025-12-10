@@ -1629,12 +1629,87 @@ def add_workout_feedback(workout_id):
 # INITIALIZE DATABASE
 # ============================================================================
 
+def seed_demo_data():
+    """Seed demo videos and users if they don't exist"""
+    try:
+        # Seed demo videos
+        demo_videos = [
+            {'exercise_type': 'squat', 'title': 'Perfect Squat Form', 'description': 'Learn proper squat technique', 'video_url': 'https://www.youtube.com/embed/ultWZbUMPL8', 'thumbnail_url': 'https://img.youtube.com/vi/ultWZbUMPL8/mqdefault.jpg', 'duration_seconds': 180, 'difficulty_level': 'beginner', 'target_muscles': 'Quads, Glutes, Hamstrings'},
+            {'exercise_type': 'pushup', 'title': 'Push-up Fundamentals', 'description': 'Master the perfect push-up', 'video_url': 'https://www.youtube.com/embed/IODxDxX7oi4', 'thumbnail_url': 'https://img.youtube.com/vi/IODxDxX7oi4/mqdefault.jpg', 'duration_seconds': 240, 'difficulty_level': 'beginner', 'target_muscles': 'Chest, Triceps, Shoulders'},
+            {'exercise_type': 'plank', 'title': 'Plank Hold Technique', 'description': 'Build core strength', 'video_url': 'https://www.youtube.com/embed/pSHjTRCQxIw', 'thumbnail_url': 'https://img.youtube.com/vi/pSHjTRCQxIw/mqdefault.jpg', 'duration_seconds': 150, 'difficulty_level': 'beginner', 'target_muscles': 'Core, Abs, Lower Back'},
+            {'exercise_type': 'lunge', 'title': 'Forward Lunge Form', 'description': 'Perfect your lunge technique', 'video_url': 'https://www.youtube.com/embed/QOVaHwm-Q6U', 'thumbnail_url': 'https://img.youtube.com/vi/QOVaHwm-Q6U/mqdefault.jpg', 'duration_seconds': 200, 'difficulty_level': 'beginner', 'target_muscles': 'Quads, Glutes, Hamstrings'}
+        ]
+        
+        for demo_data in demo_videos:
+            existing = DemoVideo.query.filter_by(exercise_type=demo_data['exercise_type'], title=demo_data['title']).first()
+            if not existing:
+                demo = DemoVideo(**demo_data)
+                db.session.add(demo)
+                print(f"  + Added demo video: {demo_data['title']}")
+        
+        # Seed demo users
+        demo_users = [
+            {'username': 'therapist', 'email': 'therapist@kinetic-ai.cc', 'password': 'therapist123', 'role': 'clinician'},
+            {'username': 'patient', 'email': 'patient@kinetic-ai.cc', 'password': 'patient123', 'role': 'user'},
+            {'username': 'admin', 'email': 'admin@kinetic-ai.cc', 'password': 'admin123', 'role': 'admin'}
+        ]
+        
+        therapist_id = None
+        patient_id = None
+        
+        for user_data in demo_users:
+            existing = User.query.filter_by(username=user_data['username']).first()
+            if not existing:
+                password_hash = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+                user = User(
+                    username=user_data['username'],
+                    email=user_data['email'],
+                    password_hash=password_hash,
+                    role=user_data['role']
+                )
+                db.session.add(user)
+                db.session.flush()  # Get the ID
+                print(f"  + Added demo user: {user_data['username']}")
+                
+                if user_data['role'] == 'clinician':
+                    therapist_id = user.id
+                elif user_data['role'] == 'user':
+                    patient_id = user.id
+            else:
+                if user_data['role'] == 'clinician':
+                    therapist_id = existing.id
+                elif user_data['role'] == 'user':
+                    patient_id = existing.id
+        
+        # Create patient profile for demo patient if it doesn't exist
+        if patient_id and therapist_id:
+            existing_profile = PatientProfile.query.filter_by(user_id=patient_id).first()
+            if not existing_profile:
+                profile = PatientProfile(
+                    user_id=patient_id,
+                    assigned_therapist_id=therapist_id,
+                    full_name='Demo Patient',
+                    primary_diagnosis='General fitness evaluation',
+                    treatment_goals='Improve overall fitness and exercise form',
+                    current_status='active'
+                )
+                db.session.add(profile)
+                print(f"  + Added patient profile for demo patient")
+        
+        db.session.commit()
+        print("✓ Demo data seeded")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"  Note: Demo data seeding skipped or partial: {e}")
+
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables and seed demo data"""
     try:
         with app.app_context():
             db.create_all()
             print("✓ Database tables created")
+            seed_demo_data()
     except Exception as e:
         print(f"✗ Database initialization error: {e}")
         raise
