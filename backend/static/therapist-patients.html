@@ -9,8 +9,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #4A1D6A;
-            --primary-light: #6B2D8B;
+            --primary: #2D1B4E;
+            --primary-light: #3D2A5E;
+            --primary-dark: #1F1335;
             --accent: #D4AF37;
             --accent-light: #E5C55A;
             --success: #10b981;
@@ -431,7 +432,7 @@
         
         .video-option.selected {
             border-color: var(--primary);
-            background: #f5f0f9;
+            background: #E8E4F0;
         }
         
         .video-thumbnail {
@@ -798,10 +799,29 @@
 
         function checkAuth() {
             const token = localStorage.getItem('token');
-            if (!token) {
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
                 window.location.href = 'login.html';
-                return;
+                return false;
             }
+            
+            // Check role
+            try {
+                const userData = JSON.parse(user);
+                if (userData.role !== 'clinician' && userData.role !== 'admin') {
+                    // Not a therapist, redirect to patient dashboard
+                    window.location.href = 'patient-dashboard.html';
+                    return false;
+                }
+            } catch (e) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            return true;
         }
 
         // Helper function for authenticated requests
