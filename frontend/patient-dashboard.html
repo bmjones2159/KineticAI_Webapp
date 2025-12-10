@@ -6,15 +6,13 @@
     <title>Patient Dashboard - KineticAI</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         :root {
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
+            --primary: #4A1D6A;
+            --primary-light: #6B2D8B;
+            --accent: #D4AF37;
+            --accent-light: #E5C55A;
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -26,88 +24,83 @@
             --gray-700: #374151;
             --gray-900: #111827;
         }
-
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--gray-50);
             color: var(--gray-900);
             line-height: 1.6;
         }
-
+        
         /* Navbar */
         .navbar {
-            background: white;
-            border-bottom: 1px solid var(--gray-200);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px rgba(74, 29, 106, 0.3);
             position: sticky;
             top: 0;
             z-index: 100;
         }
-
+        
         .navbar-brand {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             font-weight: 700;
             font-size: 1.25rem;
-            color: var(--primary);
+            color: white;
         }
-
+        
         .navbar-brand svg {
             width: 32px;
             height: 32px;
+            color: var(--accent);
         }
-
-        .navbar-right {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
+        
         .user-info {
+            color: rgba(255,255,255,0.9);
             font-size: 0.875rem;
-            color: var(--gray-600);
         }
-
+        
         .user-name {
             font-weight: 600;
-            color: var(--gray-900);
+            color: white;
         }
-
+        
         .btn-logout {
-            background: var(--gray-100);
-            color: var(--gray-700);
+            background: rgba(255,255,255,0.2);
+            color: white;
             border: none;
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             cursor: pointer;
             font-weight: 500;
+            margin-left: 1rem;
             transition: all 0.2s;
         }
-
+        
         .btn-logout:hover {
-            background: var(--gray-200);
+            background: rgba(255,255,255,0.3);
         }
-
+        
         /* Container */
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
         }
-
-        /* Stats Cards */
+        
+        /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
             margin-bottom: 2rem;
         }
-
+        
         .stat-card {
             background: white;
             border-radius: 1rem;
@@ -116,40 +109,37 @@
             border: 1px solid var(--gray-200);
             transition: all 0.2s;
         }
-
+        
         .stat-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
-
+        
         .stat-label {
             font-size: 0.875rem;
             color: var(--gray-600);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
         }
-
+        
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
             color: var(--gray-900);
         }
-
+        
         .stat-subtext {
             font-size: 0.75rem;
             color: var(--gray-500);
-            margin-top: 0.25rem;
         }
-
+        
         /* Tabs */
         .tabs {
             display: flex;
             gap: 0.5rem;
             margin-bottom: 2rem;
             border-bottom: 2px solid var(--gray-200);
-            padding-bottom: 0;
         }
-
+        
         .tab {
             background: none;
             border: none;
@@ -161,93 +151,87 @@
             border-bottom: 2px solid transparent;
             margin-bottom: -2px;
             transition: all 0.2s;
+            position: relative;
         }
-
-        .tab:hover {
-            color: var(--primary);
-        }
-
+        
+        .tab:hover { color: var(--primary); }
+        
         .tab.active {
             color: var(--primary);
             border-bottom-color: var(--primary);
         }
-
+        
+        .tab .badge {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background: var(--danger);
+            color: white;
+            font-size: 0.65rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 999px;
+        }
+        
         /* Tab Content */
         .tab-content {
             display: none;
         }
-
+        
         .tab-content.active {
             display: block;
             animation: fadeIn 0.3s;
         }
-
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
+        
         /* Exercise Cards */
         .exercise-grid {
             display: grid;
             gap: 1.5rem;
         }
-
+        
         .exercise-card {
             background: white;
             border-radius: 1rem;
             padding: 1.5rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid var(--gray-200);
-            transition: all 0.2s;
         }
-
-        .exercise-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
+        
         .exercise-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 1rem;
         }
-
+        
         .exercise-title {
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
-
+        
         .exercise-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), #3b82f6);
-            border-radius: 0.5rem;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 0.75rem;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
         }
-
+        
         .exercise-name {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--gray-900);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
-
-        .exercise-assigned-badge {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
+        
         .exercise-meta {
             display: flex;
             gap: 1.5rem;
@@ -255,58 +239,42 @@
             font-size: 0.875rem;
             color: var(--gray-600);
         }
-
-        .exercise-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
+        
         .progress-section {
             margin: 1rem 0;
         }
-
+        
         .progress-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
             font-size: 0.875rem;
+            margin-bottom: 0.5rem;
         }
-
-        .progress-label {
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        .progress-value {
-            color: var(--gray-600);
-        }
-
+        
         .progress-bar {
             height: 8px;
             background: var(--gray-200);
             border-radius: 999px;
             overflow: hidden;
         }
-
+        
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary), #3b82f6);
+            background: linear-gradient(90deg, var(--primary), var(--accent));
             border-radius: 999px;
             transition: width 0.3s;
         }
-
+        
         .exercise-actions {
             display: flex;
             gap: 0.75rem;
             margin-top: 1rem;
             flex-wrap: wrap;
         }
-
+        
         /* Buttons */
         .btn {
-            padding: 0.625rem 1.25rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 0.5rem;
             font-size: 0.875rem;
             font-weight: 600;
@@ -317,38 +285,149 @@
             align-items: center;
             gap: 0.5rem;
         }
-
+        
         .btn-primary {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
             color: white;
         }
-
+        
         .btn-primary:hover {
-            background: var(--primary-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 12px rgba(74, 29, 106, 0.3);
         }
-
+        
         .btn-secondary {
             background: var(--gray-100);
             color: var(--gray-700);
         }
-
+        
         .btn-secondary:hover {
             background: var(--gray-200);
         }
-
+        
         .btn-success {
             background: var(--success);
             color: white;
         }
-
+        
         .btn-success:hover {
             background: #059669;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
-
+        
+        /* Feedback Cards */
+        .feedback-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--gray-200);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .feedback-exercise {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+        
+        .feedback-date {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        
+        .feedback-score {
+            background: var(--gray-100);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+        
+        .feedback-score.excellent { background: #d1fae5; color: #065f46; }
+        .feedback-score.good { background: #fef3c7; color: #92400e; }
+        .feedback-score.needs-work { background: #fee2e2; color: #991b1b; }
+        
+        .suggestion-list {
+            margin: 1rem 0;
+        }
+        
+        .suggestion-item {
+            background: var(--gray-50);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .suggestion-issue {
+            font-weight: 500;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+        }
+        
+        .suggestion-fix {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
+        .therapist-notes {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .therapist-notes-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+        }
+        
+        /* History Items */
+        .history-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .history-item {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .history-date {
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+        
+        .history-score {
+            background: var(--success);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .history-details {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        
         /* Modal */
         .modal {
             display: none;
@@ -363,14 +442,13 @@
             padding: 2rem;
             backdrop-filter: blur(4px);
         }
-
+        
         .modal.active {
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.2s;
         }
-
+        
         .modal-content {
             background: white;
             border-radius: 1rem;
@@ -379,20 +457,8 @@
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: slideUp 0.3s;
         }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        
         .modal-header {
             padding: 1.5rem;
             border-bottom: 1px solid var(--gray-200);
@@ -400,126 +466,89 @@
             justify-content: space-between;
             align-items: center;
         }
-
+        
         .modal-title {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--gray-900);
         }
-
+        
         .modal-close {
             background: none;
             border: none;
             font-size: 1.5rem;
             color: var(--gray-400);
             cursor: pointer;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 0.5rem;
-            transition: all 0.2s;
         }
-
-        .modal-close:hover {
-            background: var(--gray-100);
-            color: var(--gray-600);
-        }
-
+        
         .modal-body {
             padding: 1.5rem;
         }
-
+        
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        
         /* Form */
-        .form-section {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-section-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
         .form-group {
             margin-bottom: 1rem;
         }
-
+        
         .form-label {
             display: block;
             font-size: 0.875rem;
             font-weight: 500;
-            color: var(--gray-700);
             margin-bottom: 0.5rem;
         }
-
+        
         .form-input {
             width: 100%;
-            padding: 0.625rem 0.875rem;
+            padding: 0.75rem;
             border: 1px solid var(--gray-300);
             border-radius: 0.5rem;
             font-size: 0.875rem;
-            transition: all 0.2s;
         }
-
+        
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 3px rgba(74, 29, 106, 0.1);
         }
-
+        
         .form-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-
-        textarea.form-input {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        /* Video Upload Area */
+        
+        /* Upload Area */
         .upload-area {
             border: 2px dashed var(--gray-300);
             border-radius: 0.75rem;
             padding: 2rem;
             text-align: center;
             background: var(--gray-50);
-            transition: all 0.2s;
             cursor: pointer;
+            transition: all 0.2s;
         }
-
+        
         .upload-area:hover {
             border-color: var(--primary);
-            background: #eff6ff;
+            background: #f5f0f9;
         }
-
-        .upload-area.dragging {
-            border-color: var(--primary);
-            background: #eff6ff;
-        }
-
+        
         .upload-icon {
             font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .upload-text {
-            font-size: 0.875rem;
-            color: var(--gray-600);
             margin-bottom: 0.5rem;
         }
-
-        .upload-subtext {
-            font-size: 0.75rem;
-            color: var(--gray-500);
+        
+        .upload-text {
+            color: var(--gray-600);
         }
-
+        
         .file-info {
             display: flex;
             align-items: center;
@@ -529,13 +558,12 @@
             border-radius: 0.5rem;
             margin-top: 1rem;
         }
-
+        
         .file-name {
             flex: 1;
             font-size: 0.875rem;
-            font-weight: 500;
         }
-
+        
         .file-remove {
             background: none;
             border: none;
@@ -543,92 +571,55 @@
             cursor: pointer;
             font-size: 1.25rem;
         }
-
-        /* Modal Footer */
-        .modal-footer {
-            padding: 1.5rem;
-            border-top: 1px solid var(--gray-200);
-            display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
-        }
-
-        /* Workout History */
-        .history-list {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .history-item {
-            background: white;
-            border: 1px solid var(--gray-200);
+        
+        /* Analysis Results */
+        .analysis-results {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
             border-radius: 0.75rem;
-            padding: 1rem;
-            transition: all 0.2s;
+            padding: 1.5rem;
+            margin-top: 1rem;
         }
-
-        .history-item:hover {
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .history-header {
+        
+        .analysis-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 0.75rem;
+            margin-bottom: 1rem;
         }
-
-        .history-date {
-            font-size: 0.875rem;
+        
+        .analysis-score {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .analysis-suggestions {
+            background: rgba(255,255,255,0.1);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--gray-600);
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+        
+        .empty-state-title {
+            font-size: 1.125rem;
             font-weight: 600;
             color: var(--gray-700);
-        }
-
-        .history-score {
-            background: var(--success);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .history-details {
-            display: flex;
-            gap: 1.5rem;
             margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-600);
         }
-
-        .history-notes {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            font-style: italic;
-            margin-top: 0.5rem;
-        }
-
-        .therapist-feedback {
-            background: #eff6ff;
-            border-left: 3px solid var(--primary);
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            margin-top: 0.75rem;
-        }
-
-        .therapist-feedback-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--primary);
-            margin-bottom: 0.25rem;
-        }
-
-        .therapist-feedback-text {
-            font-size: 0.875rem;
-            color: var(--gray-700);
-        }
-
-        /* Loading & Success States */
+        
+        /* Loading */
         .loading {
             display: flex;
             align-items: center;
@@ -636,94 +627,26 @@
             gap: 0.5rem;
             padding: 2rem;
         }
-
+        
         .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--gray-200);
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--gray-200);
             border-top-color: var(--primary);
             border-radius: 50%;
             animation: spin 0.6s linear infinite;
         }
-
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .alert-success {
-            background: #d1fae5;
-            border: 1px solid #10b981;
-            color: #065f46;
-        }
-
-        .alert-error {
-            background: #fee2e2;
-            border: 1px solid #ef4444;
-            color: #991b1b;
-        }
-
-        /* Empty States */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--gray-600);
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        .empty-state-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
-        }
-
-        .empty-state-text {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-
+        
         /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .exercise-meta {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .exercise-actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .modal {
-                padding: 1rem;
-            }
+            .container { padding: 1rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-row { grid-template-columns: 1fr; }
+            .btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -737,19 +660,17 @@
             </svg>
             <span>KineticAI</span>
         </div>
-        <div class="navbar-right">
+        <div style="display: flex; align-items: center;">
             <div class="user-info">
-                <div class="user-name" id="userName">Loading...</div>
+                Welcome, <span class="user-name" id="userName">Patient</span>
             </div>
             <button class="btn-logout" onclick="logout()">Logout</button>
         </div>
     </nav>
 
-    <!-- Main Container -->
     <div class="container">
-        
         <!-- Stats Grid -->
-        <div class="stats-grid" id="statsGrid">
+        <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-label">Total Workouts</div>
                 <div class="stat-value" id="totalWorkouts">--</div>
@@ -765,15 +686,24 @@
                 <div class="stat-value" id="avgForm">--%</div>
                 <div class="stat-subtext">AI analysis score</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-label">Feedback</div>
+                <div class="stat-value" id="feedbackCount">--</div>
+                <div class="stat-subtext">From therapist</div>
+            </div>
         </div>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('assigned')">
-                Assigned Exercises
+            <button class="tab active" onclick="switchTab('assigned', this)">
+                💪 Assigned Exercises
             </button>
-            <button class="tab" onclick="switchTab('history')">
-                Workout History
+            <button class="tab" onclick="switchTab('feedback', this)">
+                📋 Therapist Feedback
+                <span class="badge" id="feedbackBadge" style="display: none;">0</span>
+            </button>
+            <button class="tab" onclick="switchTab('history', this)">
+                📊 Workout History
             </button>
         </div>
 
@@ -787,7 +717,17 @@
             </div>
         </div>
 
-        <!-- Workout History Tab -->
+        <!-- Feedback Tab -->
+        <div class="tab-content" id="feedbackTab">
+            <div id="feedbackList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span>Loading feedback...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
         <div class="tab-content" id="historyTab">
             <div id="workoutHistory">
                 <div class="loading">
@@ -796,7 +736,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     <!-- Log Workout Modal -->
@@ -804,52 +743,40 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Log Workout</h2>
-                <button class="modal-close" onclick="closeLogWorkoutModal()">×</button>
+                <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
                 <form id="logWorkoutForm">
+                    <input type="hidden" id="assignmentId">
+                    <input type="hidden" id="exerciseType">
                     
-                    <!-- Assignment Info -->
-                    <div id="assignmentInfo" style="display: none;">
-                        <div class="alert alert-success">
-                            <strong>Assignment Target:</strong> <span id="assignmentTarget"></span>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Sets Completed *</label>
+                            <input type="number" class="form-input" id="setsCompleted" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Reps per Set *</label>
+                            <input type="number" class="form-input" id="repsPerSet" min="1" required>
                         </div>
                     </div>
-
-                    <!-- Workout Details -->
-                    <div class="form-section">
-                        <div class="form-section-title">📊 Workout Details</div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Sets Completed *</label>
-                                <input type="number" class="form-input" id="setsCompleted" min="1" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Reps per Set *</label>
-                                <input type="number" class="form-input" id="repsPerSet" min="1" required>
-                            </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Weight (lbs)</label>
+                            <input type="number" class="form-input" id="weightLbs" step="0.5" placeholder="Optional">
                         </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Weight (lbs)</label>
-                                <input type="number" class="form-input" id="weightLbs" step="0.5" placeholder="Optional">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Duration (min)</label>
-                                <input type="number" class="form-input" id="durationMin" step="0.5" placeholder="Optional">
-                            </div>
+                        <div class="form-group">
+                            <label class="form-label">Duration (min)</label>
+                            <input type="number" class="form-input" id="durationMin" step="1" placeholder="Optional">
                         </div>
                     </div>
-
-                    <!-- Video Upload -->
-                    <div class="form-section">
-                        <div class="form-section-title">📹 Video Analysis (Optional)</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">📹 Upload Workout Video (Optional)</label>
                         <div class="upload-area" id="uploadArea" onclick="document.getElementById('videoFile').click()">
                             <div class="upload-icon">📤</div>
-                            <div class="upload-text">Click or drag video here</div>
-                            <div class="upload-subtext">Get AI form feedback (optional)</div>
+                            <div class="upload-text">Click or drag video here for AI analysis</div>
                         </div>
                         <input type="file" id="videoFile" accept="video/*" style="display: none;">
                         <div id="fileInfo" style="display: none;" class="file-info">
@@ -857,49 +784,31 @@
                             <button type="button" class="file-remove" onclick="removeVideo()">×</button>
                         </div>
                     </div>
-
-                    <!-- Notes -->
-                    <div class="form-section">
-                        <div class="form-section-title">📝 Notes</div>
-                        <div class="form-group">
-                            <textarea class="form-input" id="workoutNotes" placeholder="How did it feel? Any pain or difficulty?"></textarea>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-input" id="workoutNotes" rows="2" placeholder="How did it feel?"></textarea>
                     </div>
-
+                    
+                    <div id="analysisResultsContainer" style="display: none;">
+                        <!-- AI results will appear here after upload -->
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeLogWorkoutModal()">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitWorkout()">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitWorkout()" id="submitBtn">
                     💾 Save Workout
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- View Demo Video Modal -->
-    <div class="modal" id="demoVideoModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">Reference Video</h2>
-                <button class="modal-close" onclick="closeDemoModal()">×</button>
-            </div>
-            <div class="modal-body">
-                <video id="demoVideo" controls style="width: 100%; border-radius: 0.5rem;"></video>
-                <div id="demoAnalysis" style="margin-top: 1rem;"></div>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Configuration
-        const API_URL = 'YOUR_BACKEND_URL'; // Update this!
-        
+        const API_URL = window.location.origin;
         let currentUser = null;
-        let currentAssignment = null;
         let selectedVideoFile = null;
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
             loadDashboard();
@@ -909,19 +818,16 @@
         function checkAuth() {
             const token = localStorage.getItem('token');
             if (!token) {
-                window.location.href = '/login.html';
+                window.location.href = 'login.html';
                 return;
             }
         }
 
         async function loadDashboard() {
-            try {
-                await loadUserInfo();
-                await loadStats();
-                await loadAssignedExercises();
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-            }
+            await loadUserInfo();
+            await loadStats();
+            await loadAssignedExercises();
+            await loadFeedback();
         }
 
         async function loadUserInfo() {
@@ -933,7 +839,7 @@
                 
                 if (response.ok) {
                     currentUser = await response.json();
-                    document.getElementById('userName').textContent = currentUser.name;
+                    document.getElementById('userName').textContent = currentUser.name || currentUser.username;
                 }
             } catch (error) {
                 console.error('Error loading user info:', error);
@@ -950,19 +856,18 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Total workouts
-                    document.getElementById('totalWorkouts').textContent = data.summary.total_workouts;
+                    document.getElementById('totalWorkouts').textContent = data.summary?.total_workouts || 0;
                     
                     // This week
                     const weekAgo = new Date();
                     weekAgo.setDate(weekAgo.getDate() - 7);
-                    const thisWeek = data.workouts.filter(w => 
+                    const thisWeek = (data.workouts || []).filter(w => 
                         new Date(w.completed_at) > weekAgo
                     ).length;
                     document.getElementById('weekWorkouts').textContent = thisWeek;
                     
                     // Average form
-                    const avgForm = data.summary.avg_form_score;
+                    const avgForm = data.summary?.avg_form_score;
                     document.getElementById('avgForm').textContent = avgForm ? `${avgForm}%` : 'N/A';
                 }
             } catch (error) {
@@ -1008,11 +913,11 @@
                 return;
             }
 
-            container.innerHTML = exercises.map(ex => {
+            container.innerHTML = '<div class="exercise-grid">' + exercises.map(ex => {
                 const progress = ex.times_completed || 0;
                 const target = ex.frequency_per_week || 3;
                 const percentage = Math.min(100, (progress / target) * 100);
-                const exerciseType = ex.video?.analysis_results?.exercise_type || 'Exercise';
+                const exerciseType = ex.exercise_type || 'Exercise';
                 
                 return `
                     <div class="exercise-card">
@@ -1020,38 +925,24 @@
                             <div class="exercise-title">
                                 <div class="exercise-icon">💪</div>
                                 <div>
-                                    <div class="exercise-name">${exerciseType}</div>
+                                    <div class="exercise-name">${exerciseType.toUpperCase()}</div>
+                                    <div style="font-size: 0.875rem; color: var(--gray-600);">
+                                        ${ex.target_sets || 3} sets × ${ex.target_reps || 12} reps
+                                    </div>
                                 </div>
                             </div>
-                            <div class="exercise-assigned-badge">
-                                ✅ Assigned
-                            </div>
-                        </div>
-
-                        <div class="exercise-meta">
-                            <div class="exercise-meta-item">
-                                <strong>Target:</strong> ${ex.target_sets || 3} sets × ${ex.target_reps || 12} reps
-                            </div>
-                            <div class="exercise-meta-item">
-                                <strong>Frequency:</strong> ${ex.frequency_per_week}x/week
-                            </div>
-                            ${ex.due_date ? `
-                                <div class="exercise-meta-item">
-                                    <strong>Due:</strong> ${new Date(ex.due_date).toLocaleDateString()}
-                                </div>
-                            ` : ''}
                         </div>
 
                         ${ex.instructions ? `
-                            <div style="margin: 1rem 0; font-size: 0.875rem; color: var(--gray-600);">
-                                ${ex.instructions}
+                            <div style="margin: 1rem 0; font-size: 0.875rem; color: var(--gray-600); background: var(--gray-50); padding: 0.75rem; border-radius: 0.5rem;">
+                                📝 ${ex.instructions}
                             </div>
                         ` : ''}
 
                         <div class="progress-section">
                             <div class="progress-header">
-                                <span class="progress-label">Progress This Week</span>
-                                <span class="progress-value">${progress}/${target}</span>
+                                <span>Progress This Week</span>
+                                <span>${progress}/${target}</span>
                             </div>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: ${percentage}%"></div>
@@ -1059,222 +950,130 @@
                         </div>
 
                         <div class="exercise-actions">
-                            ${ex.video_id ? `
-                                <button class="btn btn-secondary" onclick="viewDemoVideo(${ex.video_id})">
-                                    👁️ View Demo
-                                </button>
-                            ` : ''}
-                            <button class="btn btn-primary" onclick="openLogWorkoutModal(${ex.id}, '${exerciseType}', ${ex.target_sets}, ${ex.target_reps})">
+                            <button class="btn btn-primary" onclick="openLogModal(${ex.id}, '${exerciseType}', ${ex.target_sets || 3}, ${ex.target_reps || 12})">
                                 📝 Log Workout
                             </button>
-                            <button class="btn btn-secondary" onclick="viewExerciseHistory('${exerciseType}', ${ex.id})">
-                                📊 View History
-                            </button>
                         </div>
+                    </div>
+                `;
+            }).join('') + '</div>';
+        }
+
+        async function loadFeedback() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/patient/suggestions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load feedback');
+                
+                const data = await response.json();
+                const suggestions = data.suggestions || [];
+                
+                document.getElementById('feedbackCount').textContent = suggestions.length;
+                
+                // Show badge for unviewed
+                const unviewed = suggestions.filter(s => !s.viewed).length;
+                const badge = document.getElementById('feedbackBadge');
+                if (unviewed > 0) {
+                    badge.textContent = unviewed;
+                    badge.style.display = 'inline';
+                }
+                
+                displayFeedback(suggestions);
+                
+            } catch (error) {
+                console.error('Error loading feedback:', error);
+                document.getElementById('feedbackList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-title">No Feedback Yet</div>
+                        <div class="empty-state-text">Complete workouts with video to receive therapist feedback.</div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayFeedback(suggestions) {
+            const container = document.getElementById('feedbackList');
+            
+            if (!suggestions || suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-title">No Feedback Yet</div>
+                        <div class="empty-state-text">Complete workouts with video to receive therapist feedback.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = suggestions.map(sugg => {
+                const scoreClass = sugg.form_score >= 85 ? 'excellent' : sugg.form_score >= 70 ? 'good' : 'needs-work';
+                const feedbackItems = sugg.suggestions || [];
+                
+                return `
+                    <div class="feedback-card" onclick="markFeedbackViewed(${sugg.id})">
+                        <div class="feedback-header">
+                            <div>
+                                <div class="feedback-exercise">${sugg.exercise_type?.toUpperCase() || 'Exercise'}</div>
+                                <div class="feedback-date">${new Date(sugg.workout_date).toLocaleDateString()} • From ${sugg.therapist_name}</div>
+                            </div>
+                            <div class="feedback-score ${scoreClass}">${sugg.form_score || 0}%</div>
+                        </div>
+                        
+                        ${feedbackItems.length > 0 ? `
+                            <div class="suggestion-list">
+                                ${feedbackItems.map(item => `
+                                    <div class="suggestion-item">
+                                        <div class="suggestion-issue">⚠️ ${item.issue}</div>
+                                        <div class="suggestion-fix">💡 ${item.fix}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        ${sugg.therapist_notes ? `
+                            <div class="therapist-notes">
+                                <div class="therapist-notes-label">👨‍⚕️ Therapist Notes</div>
+                                <div>${sugg.therapist_notes}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${sugg.recommendation?.message ? `
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: var(--gray-50); border-radius: 0.5rem;">
+                                <strong>${sugg.recommendation.level === 'excellent' ? '🌟' : '📈'} ${sugg.recommendation.message}</strong>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
         }
 
-        function openLogWorkoutModal(assignmentId, exerciseType, targetSets, targetReps) {
-            currentAssignment = { id: assignmentId, exerciseType, targetSets, targetReps };
-            
-            document.getElementById('modalTitle').textContent = `Log Workout: ${exerciseType}`;
-            document.getElementById('assignmentTarget').textContent = `${targetSets} sets × ${targetReps} reps`;
-            document.getElementById('assignmentInfo').style.display = 'block';
-            
-            // Pre-fill with target values
-            document.getElementById('setsCompleted').value = targetSets;
-            document.getElementById('repsPerSet').value = targetReps;
-            
-            document.getElementById('logWorkoutModal').classList.add('active');
-        }
-
-        function closeLogWorkoutModal() {
-            document.getElementById('logWorkoutModal').classList.remove('active');
-            document.getElementById('logWorkoutForm').reset();
-            removeVideo();
-            currentAssignment = null;
-        }
-
-        function setupVideoUpload() {
-            const uploadArea = document.getElementById('uploadArea');
-            const fileInput = document.getElementById('videoFile');
-
-            // Drag and drop
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('dragging');
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('dragging');
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('dragging');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0 && files[0].type.startsWith('video/')) {
-                    fileInput.files = files;
-                    handleVideoSelect(files[0]);
-                }
-            });
-
-            // File input change
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleVideoSelect(e.target.files[0]);
-                }
-            });
-        }
-
-        function handleVideoSelect(file) {
-            selectedVideoFile = file;
-            document.getElementById('fileName').textContent = file.name;
-            document.getElementById('uploadArea').style.display = 'none';
-            document.getElementById('fileInfo').style.display = 'flex';
-        }
-
-        function removeVideo() {
-            selectedVideoFile = null;
-            document.getElementById('videoFile').value = '';
-            document.getElementById('uploadArea').style.display = 'block';
-            document.getElementById('fileInfo').style.display = 'none';
-        }
-
-        async function submitWorkout() {
+        async function markFeedbackViewed(suggestionId) {
             try {
-                const setsCompleted = parseInt(document.getElementById('setsCompleted').value);
-                const repsPerSet = parseInt(document.getElementById('repsPerSet').value);
-                const weightLbs = parseFloat(document.getElementById('weightLbs').value) || null;
-                const durationMin = parseFloat(document.getElementById('durationMin').value);
-                const notes = document.getElementById('workoutNotes').value;
-
-                if (!setsCompleted || !repsPerSet) {
-                    alert('Please fill in sets and reps');
-                    return;
-                }
-
-                // Create form data
-                const formData = new FormData();
-                if (currentAssignment) {
-                    formData.append('assignment_id', currentAssignment.id);
-                    formData.append('exercise_type', currentAssignment.exerciseType);
-                } else {
-                    alert('Assignment information missing');
-                    return;
-                }
-                
-                formData.append('sets_completed', setsCompleted);
-                formData.append('reps_per_set', repsPerSet);
-                if (weightLbs) formData.append('weight_lbs', weightLbs);
-                if (durationMin) formData.append('duration_seconds', durationMin * 60);
-                if (notes) formData.append('notes', notes);
-                if (selectedVideoFile) formData.append('video', selectedVideoFile);
-
-                // Submit
                 const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/patient/workouts/log`, {
+                await fetch(`${API_URL}/api/patient/suggestions/${suggestionId}/view`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to log workout');
-                }
-
-                const result = await response.json();
-                
-                // Show success
-                let message = '✅ Workout logged successfully!';
-                if (result.analysis_results) {
-                    message += `\n📊 Form Score: ${result.analysis_results.form_score}%`;
-                }
-                if (result.progress) {
-                    message += `\n🎯 Progress: ${result.progress.completed_this_week}/${result.progress.target_per_week}`;
-                }
-                
-                alert(message);
-                
-                closeLogWorkoutModal();
-                loadDashboard(); // Refresh
-                
             } catch (error) {
-                console.error('Error logging workout:', error);
-                alert('Failed to log workout: ' + error.message);
+                console.error('Error marking feedback viewed:', error);
             }
         }
 
-        async function viewDemoVideo(videoId) {
+        async function loadWorkoutHistory() {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/videos/${videoId}`, {
+                const response = await fetch(`${API_URL}/api/patient/workouts/history?limit=20`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (!response.ok) throw new Error('Failed to load video');
-
-                const video = await response.json();
                 
-                const videoElement = document.getElementById('demoVideo');
-                videoElement.src = `${API_URL}/api/videos/${videoId}/stream`;
-                
-                // Show analysis if available
-                const analysisDiv = document.getElementById('demoAnalysis');
-                if (video.analysis_results) {
-                    const analysis = video.analysis_results;
-                    analysisDiv.innerHTML = `
-                        <div style="padding: 1rem; background: var(--gray-100); border-radius: 0.5rem;">
-                            <strong>AI Analysis:</strong><br>
-                            Form Score: ${analysis.form_score || 'N/A'}%<br>
-                            Reps Detected: ${analysis.total_reps || 'N/A'}
-                        </div>
-                    `;
-                } else {
-                    analysisDiv.innerHTML = '';
-                }
-
-                document.getElementById('demoVideoModal').classList.add('active');
-                
-            } catch (error) {
-                console.error('Error loading demo video:', error);
-                alert('Failed to load video. Please contact your therapist.');
-            }
-        }
-
-        function closeDemoModal() {
-            document.getElementById('demoVideoModal').classList.remove('active');
-            document.getElementById('demoVideo').pause();
-            document.getElementById('demoVideo').src = '';
-        }
-
-        async function viewExerciseHistory(exerciseType, assignmentId) {
-            switchTab('history');
-            await loadWorkoutHistory(exerciseType);
-        }
-
-        async function loadWorkoutHistory(filterExercise = null) {
-            try {
-                const token = localStorage.getItem('token');
-                let url = `${API_URL}/api/patient/workouts/history?limit=50`;
-                if (filterExercise) {
-                    url += `&exercise_type=${filterExercise}`;
-                }
-                
-                const response = await fetch(url, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
                 if (!response.ok) throw new Error('Failed to load history');
-
+                
                 const data = await response.json();
-                displayWorkoutHistory(data.workouts);
+                displayWorkoutHistory(data.workouts || []);
                 
             } catch (error) {
                 console.error('Error loading history:', error);
@@ -1302,76 +1101,181 @@
                 return;
             }
 
-            container.innerHTML = '<div class="history-list">' + workouts.map(workout => {
-                const date = new Date(workout.completed_at);
-                const dateStr = date.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
-                return `
-                    <div class="history-item">
-                        <div class="history-header">
-                            <div class="history-date">${dateStr} - ${workout.exercise_type.toUpperCase()}</div>
-                            ${workout.form_score ? `
-                                <div class="history-score">📊 ${workout.form_score}%</div>
-                            ` : ''}
-                        </div>
-
-                        <div class="history-details">
-                            <span><strong>${workout.sets_completed} sets × ${workout.reps_per_set} reps</strong></span>
-                            ${workout.weight_lbs ? `<span>@ ${workout.weight_lbs} lbs</span>` : ''}
-                            ${workout.video_id ? '<span>📹 Video analyzed</span>' : '<span>📝 No video</span>'}
-                        </div>
-
-                        ${workout.notes ? `
-                            <div class="history-notes">"${workout.notes}"</div>
-                        ` : ''}
-
-                        ${workout.therapist_feedback ? `
-                            <div class="therapist-feedback">
-                                <div class="therapist-feedback-label">👨‍⚕️ Therapist Feedback</div>
-                                <div class="therapist-feedback-text">${workout.therapist_feedback}</div>
-                            </div>
-                        ` : ''}
+            container.innerHTML = '<div class="history-list">' + workouts.map(w => `
+                <div class="history-item">
+                    <div class="history-header">
+                        <div class="history-date">${new Date(w.completed_at).toLocaleDateString()} - ${w.exercise_type?.toUpperCase() || 'Exercise'}</div>
+                        ${w.form_score ? `<div class="history-score">📊 ${w.form_score}%</div>` : ''}
                     </div>
-                `;
-            }).join('') + '</div>';
+                    <div class="history-details">
+                        <strong>${w.sets_completed} sets × ${w.reps_per_set} reps</strong>
+                        ${w.weight_lbs ? ` @ ${w.weight_lbs} lbs` : ''}
+                        ${w.video_id ? ' • 📹 Video analyzed' : ''}
+                    </div>
+                    ${w.therapist_feedback ? `
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f5f0f9; border-radius: 0.25rem; font-size: 0.875rem;">
+                            👨‍⚕️ ${w.therapist_feedback}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('') + '</div>';
         }
 
-        function switchTab(tab) {
-            // Update tab buttons
+        function switchTab(tab, btn) {
+            // Update buttons
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Update tab content
+            btn.classList.add('active');
+            
+            // Update content
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
             
             if (tab === 'assigned') {
                 document.getElementById('assignedTab').classList.add('active');
+            } else if (tab === 'feedback') {
+                document.getElementById('feedbackTab').classList.add('active');
             } else if (tab === 'history') {
                 document.getElementById('historyTab').classList.add('active');
                 loadWorkoutHistory();
             }
         }
 
-        function logout() {
-            localStorage.removeItem('token');
-            window.location.href = '/login.html';
+        function openLogModal(assignmentId, exerciseType, targetSets, targetReps) {
+            document.getElementById('assignmentId').value = assignmentId;
+            document.getElementById('exerciseType').value = exerciseType;
+            document.getElementById('modalTitle').textContent = `Log Workout: ${exerciseType.toUpperCase()}`;
+            document.getElementById('setsCompleted').value = targetSets;
+            document.getElementById('repsPerSet').value = targetReps;
+            document.getElementById('logWorkoutModal').classList.add('active');
         }
 
-        // Close modals on outside click
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
+        function closeModal() {
+            document.getElementById('logWorkoutModal').classList.remove('active');
+            document.getElementById('logWorkoutForm').reset();
+            removeVideo();
+            document.getElementById('analysisResultsContainer').style.display = 'none';
+        }
+
+        function setupVideoUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('videoFile');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--primary)';
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = 'var(--gray-300)';
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--gray-300)';
+                if (e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].type.startsWith('video/')) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleVideoSelect(e.dataTransfer.files[0]);
                 }
             });
-        });
 
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleVideoSelect(e.target.files[0]);
+                }
+            });
+        }
+
+        function handleVideoSelect(file) {
+            selectedVideoFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('uploadArea').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'flex';
+        }
+
+        function removeVideo() {
+            selectedVideoFile = null;
+            document.getElementById('videoFile').value = '';
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('fileInfo').style.display = 'none';
+        }
+
+        async function submitWorkout() {
+            try {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;"></div> Saving...';
+
+                const formData = new FormData();
+                formData.append('assignment_id', document.getElementById('assignmentId').value);
+                formData.append('exercise_type', document.getElementById('exerciseType').value);
+                formData.append('sets_completed', document.getElementById('setsCompleted').value);
+                formData.append('reps_per_set', document.getElementById('repsPerSet').value);
+                
+                const weight = document.getElementById('weightLbs').value;
+                if (weight) formData.append('weight_lbs', weight);
+                
+                const duration = document.getElementById('durationMin').value;
+                if (duration) formData.append('duration_seconds', duration * 60);
+                
+                const notes = document.getElementById('workoutNotes').value;
+                if (notes) formData.append('notes', notes);
+                
+                if (selectedVideoFile) {
+                    formData.append('video', selectedVideoFile);
+                }
+
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/patient/workouts/log`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to log workout');
+                }
+
+                const result = await response.json();
+                
+                // Show results
+                if (result.analysis_results) {
+                    const container = document.getElementById('analysisResultsContainer');
+                    container.style.display = 'block';
+                    container.innerHTML = `
+                        <div class="analysis-results">
+                            <div class="analysis-header">
+                                <span>🤖 AI Analysis Complete</span>
+                                <span class="analysis-score">${result.analysis_results.form_score}%</span>
+                            </div>
+                            <p>Your workout has been analyzed! Your therapist will review the AI suggestions and provide personalized feedback.</p>
+                        </div>
+                    `;
+                }
+
+                alert('✅ Workout logged successfully!' + (result.analysis_results ? '\n📊 AI analysis complete - your therapist will review.' : ''));
+                
+                closeModal();
+                loadDashboard();
+
+            } catch (error) {
+                console.error('Error logging workout:', error);
+                alert('Failed to log workout: ' + error.message);
+            } finally {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '💾 Save Workout';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        // Close modal on outside click
+        document.getElementById('logWorkoutModal').addEventListener('click', (e) => {
+            if (e.target.id === 'logWorkoutModal') closeModal();
+        });
     </script>
 
 </body>
