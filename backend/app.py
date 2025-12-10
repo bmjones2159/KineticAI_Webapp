@@ -956,13 +956,13 @@ def get_patient_details(patient_id):
                 'has_video': w.video_id is not None
             } for w in workouts],
             'videos': video_list,
-            'notes': [{
+           'notes': [{
                 'id': n.id,
                 'type': n.note_type,
                 'title': n.title,
                 'content': n.content,
                 'created_at': n.created_at.isoformat(),
-                ['clinician', 'admin']: n.therapist.username
+                'therapist': n.therapist.username
             } for n in notes]
         }), 200
     except Exception as e:
