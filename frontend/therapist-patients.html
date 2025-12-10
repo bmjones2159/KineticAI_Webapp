@@ -703,32 +703,58 @@
     border-radius: 8px;
 }
 
-.video-option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.exercise-card {
+    background: white;
     border: 2px solid #e2e8f0;
     padding: 20px;
     border-radius: 12px;
-    background: white;
+    cursor: pointer;
     transition: all 0.3s;
+    margin-bottom: 12px;
 }
 
-.video-option:hover {
+.exercise-card:hover {
     border-color: #805ad5;
-    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.1);
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.15);
+    transform: translateY(-2px);
 }
 
-.video-option-title {
-    font-size: 1.2em;
+.exercise-card.selected {
+    border-color: #805ad5;
+    background: #f7f3ff;
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.2);
+}
+
+.btn-assign-exercise {
+    background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
     font-weight: 600;
-    color: #2d3748;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.95em;
 }
 
-.video-option-type {
-    font-size: 0.95em;
-    color: #718096;
-    margin-top: 5px;
+.btn-assign-exercise:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
+}
+
+.btn-assign-exercise:active {
+    transform: translateY(0);
+}
+
+.btn-assign-exercise:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#videoSelectionGrid {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .btn-assign {
@@ -1177,8 +1203,8 @@
 
                         <div class="patient-actions">
                             <button class="btn btn-primary" 
-                                onclick="window.location.href='/therapist-workout-reviews.html?patient_id=${p.user_id}'">
-                                📋 View Workouts
+                            onclick="window.location.href='therapist-workout-timeline.html?patient_id=${p.user_id}'">
+                            📋 View Workouts
                             </button>
                             <button class="btn btn-outline" 
                                 onclick="viewPatientReview(${p.id})">
@@ -1261,22 +1287,22 @@
             }
         }
 
-        // Assignment Modal Functions
+                // ============= ASSIGNMENT MODAL FUNCTIONS =============
+        
         function openAssignExerciseModal(patientId, patientName) {
             currentAssignmentPatientId = patientId;
             document.getElementById('assignPatientName').textContent = patientName;
             document.getElementById('assignExerciseModal').style.display = 'block';
             
             loadAvailableVideos();
-            loadCurrentAssignments(patientId);
         }
-
+        
         function closeAssignExerciseModal() {
             document.getElementById('assignExerciseModal').style.display = 'none';
             selectedVideoForAssignment = null;
             currentAssignmentPatientId = null;
         }
-
+        
         async function loadAvailableVideos() {
             try {
                 const token = localStorage.getItem('token');
@@ -1294,47 +1320,67 @@
                 
             } catch (error) {
                 console.error('Error loading videos:', error);
-                alert('Failed to load available videos');
+                document.getElementById('videoSelectionGrid').innerHTML = 
+                    '<p style="text-align: center; color: #dc3545;">Failed to load exercises</p>';
             }
         }
-            function displayAvailableVideos() {
-                const grid = document.getElementById('videoSelectionGrid');
-                
-                if (availableVideos.length === 0) {
-                    grid.innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #718096;">
-                            <p>No exercises available</p>
-                            <p style="font-size: 0.9em;">Call POST /api/demos/seed to add demo videos</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                grid.innerHTML = availableVideos.map(video => `
-                    <div class="video-option">
+        
+        function displayAvailableVideos() {
+            const grid = document.getElementById('videoSelectionGrid');
+            
+            if (availableVideos.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #718096;">
+                        <p style="font-size: 1.1em;">No exercises available</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">Call POST /api/demos/seed to add demo videos</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = availableVideos.map(video => `
+                <div class="exercise-card ${selectedVideoForAssignment === video.demo_id ? 'selected' : ''}" 
+                    onclick="selectVideo(${video.demo_id}, event)">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div class="video-option-title">${video.title}</div>
-                            <div class="video-option-type">🏋️ ${video.exercise_type.toUpperCase()}</div>
+                            <div style="font-size: 1.1em; font-weight: 600; color: #2d3748; margin-bottom: 5px;">
+                                ${video.title}
+                            </div>
+                            <div style="font-size: 0.9em; color: #718096;">
+                                🏋️ ${video.exercise_type.toUpperCase()}
+                            </div>
                         </div>
-                        <button class="btn-assign" onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}')">
+                        <button class="btn-assign-exercise" 
+                            onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}', event)">
                             Assign
                         </button>
                     </div>
-                `).join('');
+                </div>
+            `).join('');
+        }
+        
+        function selectVideo(demoId, event) {
+            // Prevent button click from triggering
+            if (event.target.tagName === 'BUTTON') {
+                return;
             }
-                 
-                    
-        function assignExercise(demoVideoId, videoTitle) {
+            
+            selectedVideoForAssignment = demoId;
+            displayAvailableVideos();
+        }
+        
+        function assignExercise(demoVideoId, videoTitle, event) {
+            // Stop event from bubbling to parent
+            event.stopPropagation();
+            
             if (!confirm(`Assign "${videoTitle}" to ${document.getElementById('assignPatientName').textContent}?`)) {
                 return;
             }
             
             const token = localStorage.getItem('token');
-            
-            // Show loading state
             const btn = event.target;
             const originalText = btn.textContent;
-            btn.textContent = '⏳ Assigning...';
+            btn.textContent = '⏳...';
             btn.disabled = true;
             
             fetch(`${API_URL}/api/therapist/assign-exercise-video`, {
@@ -1346,7 +1392,7 @@
                 body: JSON.stringify({
                     patient_id: currentAssignmentPatientId,
                     demo_video_id: demoVideoId,
-                    target_reps: 12,  // Default values
+                    target_reps: 12,
                     target_sets: 3,
                     frequency_per_week: 3,
                     instructions: ''
@@ -1354,7 +1400,7 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.message) {
+                if (data.message || data.assignment_id) {
                     alert('✓ Exercise assigned successfully!');
                     closeAssignExerciseModal();
                 } else {
