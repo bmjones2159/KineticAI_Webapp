@@ -672,12 +672,13 @@
 .video-selection-grid {
     display: grid;
     gap: 15px;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     margin: 20px 0;
-    padding: 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    padding: 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f7fafc;
 }
 
 .video-option {
@@ -833,6 +834,105 @@
     border-radius: 5px;
     color: #856404;
 }
+
+     
+/* Exercise Card Styling - Updated for better UX */
+.exercise-card {
+    background: white;
+    border: 2px solid #e2e8f0;
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.exercise-card:hover {
+    border-color: #805ad5;
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.15);
+    transform: translateY(-2px);
+}
+
+.exercise-card.selected {
+    border-color: #805ad5;
+    background: #f7f3ff;
+}
+
+.btn-assign-exercise {
+    width: 100%;
+    margin-top: 12px;
+    background: linear-gradient(135deg, #805ad5 0%, #6b46c1 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.95em;
+}
+
+.btn-assign-exercise:hover {
+    background: linear-gradient(135deg, #6b46c1 0%, #553c9a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.3);
+}
+
+
+/* Assignment Status Badges */
+.assignment-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.status-pending {
+    background: #fef5e7;
+    color: #d68910;
+}
+
+.status-completed {
+    background: #d5f4e6;
+    color: #0e6655;
+}
+
+/* Assigned Video Item */
+.assigned-video-item {
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    background: white;
+    transition: all 0.3s;
+}
+
+.assigned-video-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-remove-assignment {
+    background: #e53e3e;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s;
+    flex-shrink: 0;
+}
+
+.btn-remove-assignment:hover {
+    background: #c53030;
+    transform: translateY(-1px);
+}
+
     
 /* Calendar/Schedule Styles */
 .schedule-section { margin-top: 30px; }
@@ -859,6 +959,9 @@
 .appointment-patient { font-size: 1.1em; color: #333; margin-bottom: 5px; }
 .appointment-type { font-size: 0.9em; color: #666; }
 </style>
+
+
+    
 </head>
 <body>
     <div class="navbar">
@@ -1063,7 +1166,7 @@
     </div>
 </div>
 
-<script>
+    <script>
 let selectedVideoForAssignment = null;
 let currentAssignmentPatientId = null;
 let availableVideos = [];
@@ -1088,7 +1191,7 @@ function closeAssignExerciseModal() {
     currentAssignmentPatientId = null;
 }
 
-// Load available exercise videos
+// Load available exercise videos from DEMO library
 async function loadAvailableVideos() {
     try {
         const token = localStorage.getItem('token');
@@ -1098,15 +1201,18 @@ async function loadAvailableVideos() {
             }
         });
         
-        if (!response.ok) throw new Error('Failed to load videos');
+        if (!response.ok) {
+            throw new Error('Failed to load videos');
+        }
         
         const data = await response.json();
-        availableVideos = data.videos;
+        availableVideos = data.videos || [];
         displayAvailableVideos();
         
     } catch (error) {
         console.error('Error loading videos:', error);
-        alert('Failed to load available videos');
+        document.getElementById('videoSelectionGrid').innerHTML = 
+            '<p style="text-align: center; color: #e53e3e; padding: 20px;">Failed to load exercise videos. Please try again.</p>';
     }
 }
 
@@ -1115,35 +1221,77 @@ function displayAvailableVideos() {
     const grid = document.getElementById('videoSelectionGrid');
     
     if (availableVideos.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #718096;">No analyzed videos available for assignment</p>';
+        grid.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #718096;">
+                <p style="font-size: 1.2em; margin-bottom: 10px;">📹 No exercise videos available</p>
+                <p style="font-size: 0.9em;">Demo videos need to be added to the library first.</p>
+                <button class="btn btn-primary" onclick="seedDemoVideos()" style="margin-top: 15px;">
+                    Load Demo Videos
+                </button>
+            </div>
+        `;
         return;
     }
     
     grid.innerHTML = availableVideos.map(video => `
-        <div class="video-option ${selectedVideoForAssignment === video.video_id ? 'selected' : ''}" 
-            onclick="selectVideoForAssignment(${video.video_id})">
-            <div class="video-option-header">
-                <span class="video-option-title">${video.filename}</span>
-                <span class="video-option-score">${Math.round(video.form_score)}% Form</span>
+        <div class="exercise-card ${selectedVideoForAssignment === video.demo_id ? 'selected' : ''}" 
+            onclick="selectVideo(${video.demo_id}, event)">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                    <div style="font-weight: 600; color: #2d3748; font-size: 1.05em; margin-bottom: 5px;">
+                        ${video.title}
+                    </div>
+                    <div style="font-size: 0.85em; color: #718096;">
+                        ${video.exercise_type.toUpperCase()}
+                    </div>
+                </div>
+                <div style="background: #48bb78; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600;">
+                    ${video.difficulty_level || 'Beginner'}
+                </div>
             </div>
-            <div class="video-option-details">
-                <span>🏋️ ${video.exercise_type.toUpperCase()}</span>
-                <span>📊 ${video.total_reps} reps</span>
-                <span>👤 ${video.owner}</span>
-            </div>
+            <p style="font-size: 0.9em; color: #4a5568; margin: 10px 0;">
+                ${video.description || 'No description'}
+            </p>
+            ${video.target_muscles ? `
+                <div style="font-size: 0.85em; color: #718096; margin-top: 8px;">
+                    🎯 ${video.target_muscles}
+                </div>
+            ` : ''}
+            <button class="btn-assign-exercise" onclick="assignExercise(${video.demo_id}, '${video.title.replace(/'/g, "\\'")}', event)">
+                Assign Exercise
+            </button>
         </div>
     `).join('');
 }
 
-// Select video for assignment
-function selectVideoForAssignment(videoId) {
-    selectedVideoForAssignment = videoId;
+// Select video (when clicking card, not button)
+function selectVideo(demoId, event) {
+    // Ignore if button was clicked
+    if (event.target.tagName === 'BUTTON') {
+        return;
+    }
+    
+    selectedVideoForAssignment = demoId;
     displayAvailableVideos();
     
-    // Auto-fill details from video
-    const video = availableVideos.find(v => v.video_id === videoId);
+    // Auto-fill exercise type if available
+    const video = availableVideos.find(v => v.demo_id === demoId);
     if (video) {
-        document.getElementById('assignTargetReps').value = video.total_reps || 12;
+        // Could auto-fill target reps based on video if needed
+        console.log('Selected video:', video.title);
+    }
+}
+
+// Assign exercise directly (when clicking button)
+function assignExercise(demoId, videoTitle, event) {
+    // Prevent card selection
+    event.stopPropagation();
+    
+    selectedVideoForAssignment = demoId;
+    
+    // Show confirmation or submit directly
+    if (confirm(`Assign "${videoTitle}" to this patient?`)) {
+        submitExerciseAssignment();
     }
 }
 
@@ -1170,7 +1318,7 @@ async function submitExerciseAssignment() {
             },
             body: JSON.stringify({
                 patient_id: currentAssignmentPatientId,
-                video_id: selectedVideoForAssignment,
+                demo_video_id: selectedVideoForAssignment,  // Use demo_video_id, not video_id
                 target_reps: targetReps,
                 target_sets: targetSets,
                 frequency_per_week: frequency,
@@ -1188,7 +1336,7 @@ async function submitExerciseAssignment() {
         alert('✓ Exercise assigned successfully!');
         
         // Refresh assignments list
-        loadCurrentAssignments(currentAssignmentPatientId);
+        await loadCurrentAssignments(currentAssignmentPatientId);
         
         // Clear form
         selectedVideoForAssignment = null;
@@ -1215,13 +1363,17 @@ async function loadCurrentAssignments(patientId) {
             }
         });
         
-        if (!response.ok) throw new Error('Failed to load assignments');
+        if (!response.ok) {
+            throw new Error('Failed to load assignments');
+        }
         
         const data = await response.json();
-        displayCurrentAssignments(data.assignments);
+        displayCurrentAssignments(data.assignments || []);
         
     } catch (error) {
         console.error('Error loading assignments:', error);
+        document.getElementById('currentAssignmentsList').innerHTML = 
+            '<p style="text-align: center; color: #e53e3e;">Failed to load assignments</p>';
     }
 }
 
@@ -1230,25 +1382,30 @@ function displayCurrentAssignments(assignments) {
     const list = document.getElementById('currentAssignmentsList');
     
     if (assignments.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: #718096;">No assignments yet</p>';
+        list.innerHTML = '<p style="text-align: center; color: #718096; padding: 20px;">No assignments yet</p>';
         return;
     }
     
     list.innerHTML = assignments.map(assignment => `
         <div class="assigned-video-item">
             <div class="assigned-video-info">
-                <h4>${assignment.video_filename}</h4>
-                <p>
-                    <strong>${assignment.exercise_type.toUpperCase()}</strong> • 
+                <h4 style="margin: 0 0 8px 0; color: #2d3748;">${assignment.video_filename}</h4>
+                <p style="margin: 4px 0; color: #4a5568; font-size: 0.95em;">
+                    <strong>${assignment.exercise_type ? assignment.exercise_type.toUpperCase() : 'Exercise'}</strong> • 
                     ${assignment.target_reps} reps × ${assignment.target_sets} sets • 
                     ${assignment.frequency_per_week}x/week
                 </p>
-                ${assignment.instructions ? `<p>📝 ${assignment.instructions}</p>` : ''}
-                <p>
+                ${assignment.instructions ? `
+                    <p style="margin: 8px 0 4px 0; color: #718096; font-size: 0.9em;">
+                        📝 ${assignment.instructions}
+                    </p>
+                ` : ''}
+                <p style="margin: 8px 0 0 0;">
                     <span class="assignment-status ${assignment.completed ? 'status-completed' : 'status-pending'}">
                         ${assignment.completed ? '✓ Completed' : '⏳ Pending'}
                     </span>
                     ${assignment.due_date ? ` • Due: ${new Date(assignment.due_date).toLocaleDateString()}` : ''}
+                    ${assignment.assigned_at ? ` • Assigned: ${new Date(assignment.assigned_at).toLocaleDateString()}` : ''}
                 </p>
             </div>
             <button class="btn-remove-assignment" onclick="removeAssignment(${assignment.assignment_id})">
@@ -1271,14 +1428,35 @@ async function removeAssignment(assignmentId) {
             }
         });
         
-        if (!response.ok) throw new Error('Failed to remove assignment');
+        if (!response.ok) {
+            throw new Error('Failed to remove assignment');
+        }
         
-        alert('Assignment removed');
-        loadCurrentAssignments(currentAssignmentPatientId);
+        alert('✅ Assignment removed');
+        await loadCurrentAssignments(currentAssignmentPatientId);
         
     } catch (error) {
         console.error('Error removing assignment:', error);
         alert('Failed to remove assignment');
+    }
+}
+
+// Helper: Seed demo videos if none exist
+async function seedDemoVideos() {
+    try {
+        const response = await fetch(`${API_URL}/api/demos/seed`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('✓ Demo videos loaded successfully!');
+            await loadAvailableVideos();
+        } else {
+            throw new Error('Failed to seed videos');
+        }
+    } catch (error) {
+        console.error('Error seeding videos:', error);
+        alert('Failed to load demo videos');
     }
 }
 </script>
