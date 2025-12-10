@@ -75,10 +75,19 @@ except Exception as e:
 # Configure HIPAA-compliant logging
 logging.basicConfig(level=logging.INFO)
 audit_logger = logging.getLogger('audit')
-audit_handler = RotatingFileHandler('audit.log', maxBytes=10000000, backupCount=10)
-audit_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-audit_handler.setFormatter(audit_formatter)
-audit_logger.addHandler(audit_handler)
+
+# Use file logging only if we can write to it, otherwise use stdout
+try:
+    audit_handler = RotatingFileHandler('/tmp/audit.log', maxBytes=10000000, backupCount=10)
+    audit_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    audit_handler.setFormatter(audit_formatter)
+    audit_logger.addHandler(audit_handler)
+except Exception as e:
+    # Fall back to console logging
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    audit_logger.addHandler(console_handler)
+    print(f"Using console logging (file logging unavailable: {e})")
 
 # ============================================================================
 # DATABASE MODELS
@@ -395,8 +404,11 @@ def api_status():
 
 @app.route('/api/health')
 def health_check():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy'})
+    """Health check endpoint for deployment platforms"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat()
+    })
 
 @app.route('/api/debug/static')
 def debug_static():
@@ -1582,17 +1594,23 @@ def add_workout_feedback(workout_id):
         print(f"Error adding feedback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
-
 # ============================================================================
 # INITIALIZE DATABASE
 # ============================================================================
 
-with app.app_context():
-    db.create_all()
-    print("✓ Database tables created")
+def init_db():
+    """Initialize database tables"""
+    try:
+        with app.app_context():
+            db.create_all()
+            print("✓ Database tables created")
+    except Exception as e:
+        print(f"✗ Database initialization error: {e}")
+        raise
+
+# Initialize on import
+init_db()
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
