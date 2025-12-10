@@ -1429,6 +1429,18 @@ async function removeAssignment(assignmentId) {
                     </button>
                 </div>
 
+             <!-- For each patient in your list -->
+                <div class="patient-card">
+                    <h3>John Doe</h3>
+                    <button onclick="viewWorkouts(123)">📋 View Workouts</button>
+                </div>
+                
+                <script>
+                function viewWorkouts(patientId) {
+                    window.location.href = `/therapist-workout-reviews.html?patient_id=${patientId}`;
+                }
+                </script `;
+            
                 <!-- Workout Progress Section -->
                 <div class="patient-info-section">
                     <h3>📊 Workout Progress & Compliance</h3>
