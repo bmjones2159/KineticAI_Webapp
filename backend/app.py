@@ -2282,7 +2282,24 @@ def add_workout_feedback(workout_id):
         logger.error(f"Error adding feedback: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-
+    @app.route('/api/therapist/appointments', methods=['POST'])
+    @jwt_required()
+    def create_appointment():
+        data = request.get_json()
+        
+        appointment = Appointment(
+            therapist_id=current_user_id,
+            patient_id=data['patient_id'],
+            scheduled_time=datetime.fromisoformat(data['scheduled_time']),
+            type=data['type'],
+            notes=data.get('notes'),
+            status='scheduled'
+        )
+        
+        db.session.add(appointment)
+        db.session.commit()
+        
+        return jsonify({'message': 'Appointment scheduled'}), 201
 
 
 if __name__ == '__main__':
