@@ -2299,6 +2299,33 @@ def add_workout_feedback(workout_id):
         
         return jsonify({'message': 'Appointment scheduled'}), 201
 
+        @app.route('/api/video-stream/<int:video_id>')
+def stream_video(video_id):
+    """Stream video file for playback"""
+    try:
+        video = Video.query.get(video_id)
+        
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        if video.is_deleted:
+            return jsonify({'error': 'Video has been deleted'}), 404
+        
+        # Check if file exists
+        if not os.path.exists(video.file_path):
+            return jsonify({'error': 'Video file not found'}), 404
+        
+        return send_file(
+            video.file_path,
+            mimetype='video/mp4',
+            as_attachment=False
+        )
+        
+    except Exception as e:
+        print(f"Error streaming video: {str(e)}")
+        return jsonify({'error': 'Failed to stream video'}), 500
+
+
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000, ssl_context='adhoc')
