@@ -9,8 +9,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --primary: #4A1D6A;
-            --primary-light: #6B2D8B;
+            --primary: #2D1B4E;
+            --primary-light: #3D2A5E;
+            --primary-dark: #1F1335;
             --accent: #D4AF37;
             --accent-light: #E5C55A;
             --success: #10b981;
@@ -537,7 +538,7 @@
         
         .upload-area:hover {
             border-color: var(--primary);
-            background: #f5f0f9;
+            background: #E8E4F0;
         }
         
         .upload-icon {
@@ -814,10 +815,28 @@
 
         function checkAuth() {
             const token = localStorage.getItem('token');
-            if (!token) {
+            const user = localStorage.getItem('user');
+            
+            if (!token || !user) {
                 window.location.href = 'login.html';
-                return;
+                return false;
             }
+            
+            // Check role - therapists should go to their dashboard
+            try {
+                const userData = JSON.parse(user);
+                if (userData.role === 'clinician' || userData.role === 'admin') {
+                    window.location.href = 'therapist-patients.html';
+                    return false;
+                }
+            } catch (e) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            return true;
         }
 
         async function loadDashboard() {
@@ -1123,7 +1142,7 @@
                         ${w.video_id ? ' • 📹 Video analyzed' : ''}
                     </div>
                     ${w.therapist_feedback ? `
-                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #f5f0f9; border-radius: 0.25rem; font-size: 0.875rem;">
+                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: #E8E4F0; border-radius: 0.25rem; font-size: 0.875rem;">
                             👨‍⚕️ ${w.therapist_feedback}
                         </div>
                     ` : ''}
