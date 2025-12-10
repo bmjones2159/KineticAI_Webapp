@@ -1493,7 +1493,10 @@
                     }
                 });
                 
-                if (!response.ok) throw new Error('Failed to load assignments');
+                if (!response.ok) {
+                    console.warn("Assignments API returned:", response.status);
+                    return displayCurrentAssignments([]);
+                }
                 
                 const data = await response.json();
                 displayCurrentAssignments(data.assignments);
@@ -1726,10 +1729,30 @@
                     <!-- Video Player -->
                     <div class="video-player-container">
                         <video controls id="video_${video.id}">
+                            <video controls id="video_${video.id}" onerror="handleVideoError(${video.id})">
                             <source src="${API_URL}/api/videos/${video.id}/stream?token=${token}" type="video/mp4">
+                        </video>
+
                             Your browser does not support video playback.
                         </video>
                     </div>
+                    function handleVideoError(videoId) {
+                        const videoEl = document.getElementById(`video_${videoId}`);
+                        if (!videoEl) return;
+                    
+                        videoEl.outerHTML = `
+                            <div style="
+                                background: #fee2e2; 
+                                padding: 20px; 
+                                border-radius: 8px; 
+                                color: #b91c1c;
+                                text-align: center;
+                            ">
+                                ⚠️ Video could not be loaded (ID ${videoId}).  
+                                File missing or not uploaded.
+                            </div>
+                        `;
+                    }
 
                     <!-- Detected Issues -->
                     ${analysis.most_common_issues && analysis.most_common_issues.length > 0 ? `
@@ -1860,7 +1883,10 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (!workoutsResponse.ok) throw new Error('Failed to load workouts');
+                if (!workoutsResponse.ok) {
+                    console.warn("Workout API returned:", workoutsResponse.status);
+                    return displayProgressData(patientId, { summary: {}, workouts: [] }, { progress: [] });
+                }
                 const workoutsData = await workoutsResponse.json();
                 
                 const progressResponse = await fetch(`${API_URL}/api/therapist/patients/${patientId}/progress`, {
