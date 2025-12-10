@@ -4,7 +4,7 @@ Backend API with encryption, audit logging, access controls, and AI suggestions
 COMPLETE WORKING VERSION with Real AI Integration
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -20,8 +20,8 @@ import traceback
 from logging.handlers import RotatingFileHandler
 import json
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize Flask app with static file serving
+app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app, resources={
     r"/api/*": {
         "origins": "*",
@@ -352,6 +352,19 @@ def format_ai_suggestions(raw_issues, exercise_type, form_score):
 
 @app.route('/')
 def index():
+    """Serve the login page"""
+    return send_from_directory('static', 'login.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    """Serve static HTML files"""
+    if filename.endswith('.html'):
+        return send_from_directory('static', filename)
+    return send_from_directory('static', filename)
+
+@app.route('/api/status')
+def api_status():
+    """API status endpoint"""
     return jsonify({
         'message': 'Kinetic AI Video Analysis API',
         'version': '2.0.0',
