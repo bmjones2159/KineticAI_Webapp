@@ -97,6 +97,7 @@ class Video(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     encrypted_filename = db.Column(db.String(255), nullable=False)
     file_hash = db.Column(db.String(64), nullable=False)
+    file_path = db.Column(db.String(500))
     file_size = db.Column(db.Integer)
     mime_type = db.Column(db.String(50))
     patient_id = db.Column(db.String(100))
@@ -414,8 +415,8 @@ def upload_video():
             user_id=current_user_id,
             filename=file.filename,
             encrypted_filename=safe_filename,
-            file_path=file_path,
-            uploaded_at=date.time.utcnow(),
+            file_path=file_path,  # FIXED: was datetime.utcnow() - wrong!
+            uploaded_at=datetime.utcnow(),  # FIXED: proper field name
             file_hash=file_hash,
             file_size=file_size,
             mime_type=file.content_type or f'video/{file_ext}'
@@ -1780,6 +1781,7 @@ class WorkoutLog(db.Model):
     completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Workout details
+    workout_date = db.Column(db.Date, default=lambda: datetime.utcnow().date(), nullable=False)
     sets_completed = db.Column(db.Integer, nullable=False)
     reps_per_set = db.Column(db.Integer, nullable=False)
     weight_lbs = db.Column(db.Float, nullable=True)  # Optional
@@ -2158,7 +2160,6 @@ def delete_workout(workout_id):
 # ============================================================================
 # API ENDPOINT: Therapist View Patient Workouts
 # ============================================================================
-
 @app.route('/api/therapist/patients/<int:patient_id>/workouts', methods=['GET'])
 @jwt_required()
 def get_patient_workouts(patient_id):
@@ -2182,9 +2183,9 @@ def get_patient_workouts(patient_id):
         # Get limit from query params
         limit = request.args.get('limit', 30, type=int)
         
-        # Get workouts
+        # Get workouts - FIXED: use correct model WorkoutLog instead of WorkoutHistory
         workouts = WorkoutLog.query.filter_by(
-            user_id=patient_id
+            patient_id=patient_id  # FIXED: use patient_id not user_id
         ).order_by(WorkoutLog.workout_date.desc()).limit(limit).all()
         
         # Build summary
@@ -2224,7 +2225,7 @@ def get_patient_workouts(patient_id):
                 'id': w.id,
                 'video_id': w.video_id,
                 'exercise_type': w.exercise_type,
-                'reps_completed': w.reps_completed,
+                'reps_completed': w.reps_per_set,  # FIXED: correct field
                 'sets_completed': w.sets_completed,
                 'form_score': w.form_score,
                 'workout_date': w.workout_date.isoformat() if w.workout_date else None,
@@ -2249,6 +2250,7 @@ def get_patient_workouts(patient_id):
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
 
 
 # ============================================================================
@@ -2312,32 +2314,77 @@ def add_workout_feedback(workout_id):
         
         return jsonify({'message': 'Appointment scheduled'}), 201
 
-        @app.route('/api/video-stream/<int:video_id>')
-def stream_video(video_id):
-    """Stream video file for playback"""
+        @app.route('/api/therapist/appointments', methods=['POST'])
+@jwt_required()
+def create_appointment():
+    """Schedule a new appointment"""
     try:
-        video = Video.query.get(video_id)
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
         
-        if not video:
-            return jsonify({'error': 'Video not found'}), 404
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can schedule appointments'}), 403
         
-        if video.is_deleted:
-            return jsonify({'error': 'Video has been deleted'}), 404
+        data = request.get_json()
         
-        # Check if file exists
-        if not os.path.exists(video.file_path):
-            return jsonify({'error': 'Video file not found'}), 404
-        
-        return send_file(
-            video.file_path,
-            mimetype='video/mp4',
-            as_attachment=False
+        appointment = Appointment(
+            therapist_id=current_user_id,
+            patient_id=data['patient_id'],
+            scheduled_time=datetime.fromisoformat(data['scheduled_time']),
+            type=data.get('type', 'in_person'),
+            duration=data.get('duration', 60),
+            notes=data.get('notes'),
+            status='scheduled'
         )
         
+        db.session.add(appointment)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Appointment scheduled',
+            'appointment_id': appointment.id
+        }), 201
+        
     except Exception as e:
-        print(f"Error streaming video: {str(e)}")
-        return jsonify({'error': 'Failed to stream video'}), 500
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/therapist/appointments', methods=['GET'])
+@jwt_required()
+def get_appointments():
+    """Get therapist's appointments"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can view appointments'}), 403
+        
+        appointments = Appointment.query.filter_by(
+            therapist_id=current_user_id
+        ).order_by(Appointment.scheduled_time).all()
+        
+        result = []
+        for apt in appointments:
+            patient = User.query.get(apt.patient_id)
+            patient_profile = PatientProfile.query.filter_by(user_id=apt.patient_id).first()
+            
+            result.append({
+                'id': apt.id,
+                'patient_id': apt.patient_id,
+                'patient_name': patient_profile.full_name if patient_profile else patient.username,
+                'scheduled_time': apt.scheduled_time.isoformat(),
+                'type': apt.type,
+                'duration': apt.duration,
+                'notes': apt.notes,
+                'status': apt.status
+            })
+        
+        return jsonify({'appointments': result}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
