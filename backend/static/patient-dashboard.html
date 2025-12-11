@@ -1047,6 +1047,7 @@
         let currentUser = null;
         let selectedVideoFile = null;
         let workoutSets = []; // Array to track sets
+        let setIdCounter = 0; // Counter for unique set IDs
         let selectedDate = new Date(); // Currently selected date
         let weekOffset = 0; // 0 = this week, -1 = last week, etc.
         let workoutDates = new Set(); // Dates that have workouts
@@ -1533,29 +1534,33 @@
             const targetReps = defaultReps || parseInt(document.getElementById('targetReps').value) || 12;
             const setNumber = workoutSets.length + 1;
             
+            // Use simple counter for unique ID
+            setIdCounter++;
+            const setId = setIdCounter;
+            
             const setData = {
-                id: Date.now(),
+                id: setId,
                 reps: targetReps,
                 completed: false
             };
             workoutSets.push(setData);
             
             const setHtml = `
-                <div class="set-item" id="set-${setData.id}">
+                <div class="set-item" id="set-${setId}">
                     <div class="set-number">${setNumber}</div>
                     <div class="set-inputs">
                         <div class="set-input-group">
                             <input type="number" class="set-input" value="${targetReps}" min="1" 
-                                   onchange="updateSetReps(${setData.id}, this.value)">
+                                   onchange="updateSetReps(${setId}, this.value)">
                             <span class="set-label">reps</span>
                         </div>
                     </div>
                     <div class="set-status">
-                        <button type="button" class="set-complete-btn" id="complete-${setData.id}" 
-                                onclick="toggleSetComplete(${setData.id})">
+                        <button type="button" class="set-complete-btn" id="complete-${setId}" 
+                                onclick="toggleSetComplete(${setId})">
                             ✓
                         </button>
-                        <button type="button" class="set-remove-btn" onclick="removeSet(${setData.id})">×</button>
+                        <button type="button" class="set-remove-btn" onclick="removeSet(${setId})">×</button>
                     </div>
                 </div>
             `;
