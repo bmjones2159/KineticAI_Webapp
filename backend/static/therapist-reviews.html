@@ -270,8 +270,9 @@
         /* Content Grid */
         .content-grid {
             display: grid;
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 350px 1fr;
             gap: 1.5rem;
+            min-height: calc(100vh - 280px);
         }
         
         @media (max-width: 1024px) {
@@ -287,6 +288,8 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid var(--gray-200);
             overflow: hidden;
+            height: fit-content;
+            max-height: calc(100vh - 280px);
         }
         
         .list-header {
@@ -388,6 +391,9 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid var(--gray-200);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
         }
         
         .detail-header {
@@ -409,7 +415,7 @@
         
         .detail-body {
             padding: 1.5rem;
-            max-height: calc(100vh - 380px);
+            flex: 1;
             overflow-y: auto;
         }
         
