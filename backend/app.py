@@ -683,39 +683,88 @@ def compute_file_hash(file_path):
 
 def format_ai_suggestions(raw_issues, exercise_type, form_score):
     """Convert raw kinetic_analyzer issues into actionable suggestions"""
-    JOINT_FIXES = {
+    
+    # Map issue types to actionable suggestions
+    ISSUE_FIXES = {
         'squat': {
             'knee': {'issue': "Knees caving inward or tracking issues", 'fix': "Push knees outward in line with toes throughout the movement", 'priority': "high"},
+            'knee_not_bent': {'issue': "Knees not bending enough", 'fix': "Focus on bending knees to at least 90 degrees", 'priority': "high"},
+            'shallow_squat': {'issue': "Not reaching proper depth", 'fix': "Lower your hips until thighs are parallel to ground", 'priority': "high"},
+            'deep_squat': {'issue': "Going too deep - may strain joints", 'fix': "Stop when thighs are parallel to ground", 'priority': "medium"},
             'hip': {'issue': "Hip depth or mobility issues", 'fix': "Focus on reaching parallel depth, improve hip mobility with stretching", 'priority': "high"},
             'ankle': {'issue': "Heel lifting or ankle mobility", 'fix': "Keep weight on heels, work on ankle dorsiflexion mobility", 'priority': "medium"},
             'back': {'issue': "Spine rounding or excessive forward lean", 'fix': "Engage core, maintain neutral spine, chest up throughout movement", 'priority': "high"},
+            'back_rounding': {'issue': "Back is rounding during movement", 'fix': "Keep chest up, engage core, maintain neutral spine", 'priority': "high"},
+            'knees_caving': {'issue': "Knees collapsing inward", 'fix': "Push knees outward tracking over toes", 'priority': "high"},
         },
         'pushup': {
             'elbow': {'issue': "Elbows flaring out too wide", 'fix': "Keep elbows at 45-degree angle from body", 'priority': "high"},
+            'elbow_flare': {'issue': "Elbows flaring out too wide", 'fix': "Keep elbows at 45-degree angle from body", 'priority': "high"},
+            'shallow_pushup': {'issue': "Not lowering chest enough", 'fix': "Lower until chest nearly touches the ground", 'priority': "high"},
             'hip': {'issue': "Hips sagging or piking up", 'fix': "Engage core and glutes to maintain straight line from head to heels", 'priority': "high"},
+            'hips_sagging': {'issue': "Hips dropping during pushup", 'fix': "Engage core and glutes, maintain plank position", 'priority': "high"},
             'back': {'issue': "Lower back arching", 'fix': "Engage core muscles, squeeze glutes to protect lower back", 'priority': "high"},
+            'neck_strain': {'issue': "Neck position is strained", 'fix': "Keep neck neutral, look at floor about 6 inches ahead", 'priority': "medium"},
         },
         'plank': {
             'hip': {'issue': "Hips too high or too low", 'fix': "Create straight line from head to heels, engage core", 'priority': "high"},
+            'hips_sagging': {'issue': "Hips dropping below body line", 'fix': "Engage core more, squeeze glutes to support spine", 'priority': "high"},
+            'hips_too_high': {'issue': "Hips raised too high (piking)", 'fix': "Lower hips to create straight line from head to heels", 'priority': "medium"},
             'back': {'issue': "Lower back sagging", 'fix': "Engage core more, squeeze glutes to support spine", 'priority': "high"},
+            'neck_dropping': {'issue': "Head dropping down", 'fix': "Keep neck neutral, look at floor between hands", 'priority': "medium"},
+            'shoulder_shrug': {'issue': "Shoulders raised toward ears", 'fix': "Push shoulders down and back, away from ears", 'priority': "medium"},
+        },
+        'lunge': {
+            'knee': {'issue': "Front knee tracking issues", 'fix': "Keep front knee aligned over ankle, not past toes", 'priority': "high"},
+            'knee_over_toe': {'issue': "Front knee going past toes", 'fix': "Take a larger step, keep knee over ankle", 'priority': "high"},
+            'shallow_lunge': {'issue': "Not lowering enough", 'fix': "Lower until back knee nearly touches ground", 'priority': "high"},
+            'balance_issue': {'issue': "Losing balance during movement", 'fix': "Engage core, take wider stance, move slower", 'priority': "medium"},
+            'torso_lean': {'issue': "Torso leaning forward", 'fix': "Keep chest up and torso upright", 'priority': "medium"},
+        },
+        'deadlift': {
+            'back': {'issue': "Back rounding during lift", 'fix': "Keep chest up, engage lats, maintain neutral spine", 'priority': "high"},
+            'back_rounding': {'issue': "Back rounding during lift", 'fix': "Keep chest up, engage lats, maintain neutral spine", 'priority': "high"},
+            'bar_path': {'issue': "Bar drifting away from body", 'fix': "Keep bar close to shins and thighs throughout lift", 'priority': "medium"},
+            'lockout_incomplete': {'issue': "Not fully locking out at top", 'fix': "Squeeze glutes and push hips forward at the top", 'priority': "medium"},
+            'hip_hinge': {'issue': "Not hinging properly at hips", 'fix': "Push hips back first, then bend knees", 'priority': "high"},
         }
     }
     
-    exercise_fixes = JOINT_FIXES.get(exercise_type.lower(), {})
+    exercise_fixes = ISSUE_FIXES.get(exercise_type.lower() if exercise_type else 'squat', ISSUE_FIXES['squat'])
     formatted_suggestions = []
     
     for issue in raw_issues:
-        joint = issue['joint'].lower()
-        count = issue['count']
+        # Handle both formats: {'joint': 'knee', 'count': 5} and {'joint': 'shallow_squat', 'count': 5}
+        issue_key = issue.get('joint', '').lower() if isinstance(issue, dict) else str(issue).lower()
+        count = issue.get('count', 1) if isinstance(issue, dict) else 1
         
-        if joint in exercise_fixes:
-            suggestion = exercise_fixes[joint].copy()
+        if issue_key in exercise_fixes:
+            suggestion = exercise_fixes[issue_key].copy()
             suggestion['frequency'] = count
             suggestion['details'] = f"Detected in {count} frames"
             formatted_suggestions.append(suggestion)
+        else:
+            # Generic issue fallback
+            formatted_suggestions.append({
+                'issue': f"Form issue detected: {issue_key}",
+                'fix': "Focus on controlled movement and proper technique",
+                'priority': 'medium',
+                'frequency': count,
+                'details': f"Detected in {count} frames"
+            })
+    
+    # Add general recommendations based on form score
+    if form_score and form_score < 70 and len(formatted_suggestions) == 0:
+        formatted_suggestions.append({
+            'issue': "Overall form needs improvement",
+            'fix': "Watch the demo video again and focus on the fundamentals",
+            'priority': 'high',
+            'frequency': 0,
+            'details': f"Form score: {form_score}%"
+        })
     
     priority_order = {'high': 0, 'medium': 1, 'low': 2}
-    formatted_suggestions.sort(key=lambda x: (priority_order.get(x['priority'], 3), -x.get('frequency', 0)))
+    formatted_suggestions.sort(key=lambda x: (priority_order.get(x.get('priority', 'medium'), 3), -x.get('frequency', 0)))
     
     return formatted_suggestions[:5]
 
