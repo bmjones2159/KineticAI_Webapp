@@ -605,6 +605,7 @@ class AISuggestion(db.Model):
     exercise_type = db.Column(db.String(100))
     raw_issues = db.Column(db.JSON)
     ai_suggestions = db.Column(db.JSON)
+    ai_feedback_text = db.Column(db.Text, nullable=True)  # AI-generated text feedback
     recommendation_level = db.Column(db.String(50))
     recommendation_message = db.Column(db.Text)
     recommendation_suggestions = db.Column(db.JSON)
@@ -1293,14 +1294,18 @@ def log_workout():
             
             recommendation = analysis_results.get('recommendation', {})
             
+            # Get AI-generated feedback text
+            ai_feedback_text = analysis_results.get('feedback_text', '')
+            
             # Build comprehensive suggestions list including weight/exercise recommendations
             all_suggestions = recommendation.get('suggestions', [])
-            if recommendation.get('weight_recommendation'):
+            if recommendation.get('weight_recommendation') or recommendation.get('weight_action'):
+                weight_rec = recommendation.get('weight_recommendation') or recommendation.get('weight_action')
                 weight_msg = {
                     'increase': f'Ready to increase weight from {weight_lbs or 0} lbs',
                     'decrease': f'Consider decreasing weight from {weight_lbs or 0} lbs',
                     'maintain': 'Maintain current weight and focus on form'
-                }.get(recommendation['weight_recommendation'], '')
+                }.get(weight_rec, '')
                 if weight_msg:
                     all_suggestions.insert(0, weight_msg)
             
@@ -1316,6 +1321,7 @@ def log_workout():
                 exercise_type=exercise_type,
                 raw_issues=raw_issues,
                 ai_suggestions=formatted_suggestions,
+                ai_feedback_text=ai_feedback_text,
                 recommendation_level=recommendation.get('level'),
                 recommendation_message=recommendation.get('message'),
                 recommendation_suggestions=all_suggestions,
@@ -1552,6 +1558,7 @@ def get_my_suggestions():
                     'level': sugg.recommendation_level,
                     'message': sugg.recommendation_message
                 },
+                'ai_feedback_text': sugg.ai_feedback_text,
                 'patient_video_id': patient_video_id,
                 'demo_video_url': demo_video_url,
                 'demo_video_title': demo_video_title
@@ -1913,6 +1920,7 @@ def get_pending_suggestions():
                 'form_score': sugg.form_score,
                 'detected_reps': sugg.detected_reps,
                 'ai_suggestions': sugg.ai_suggestions,
+                'ai_feedback_text': sugg.ai_feedback_text,
                 'recommendation': {
                     'level': sugg.recommendation_level,
                     'message': sugg.recommendation_message,
@@ -2398,6 +2406,19 @@ def run_migrations():
                 """))
                 conn.commit()
                 print("✓ Migration: Added file columns to videos")
+            
+            # Add ai_feedback_text to ai_suggestions if missing
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'ai_suggestions' AND column_name = 'ai_feedback_text'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE ai_suggestions 
+                    ADD COLUMN ai_feedback_text TEXT
+                """))
+                conn.commit()
+                print("✓ Migration: Added ai_feedback_text to ai_suggestions")
                 
     except Exception as e:
         print(f"  Migration note: {e}")
