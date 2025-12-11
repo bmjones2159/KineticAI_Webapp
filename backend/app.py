@@ -1524,6 +1524,20 @@ def get_my_suggestions():
             workout = sugg.workout_log
             therapist = User.query.get(sugg.reviewed_by) if sugg.reviewed_by else None
             
+            # Get patient's uploaded video
+            patient_video_id = sugg.video_id
+            
+            # Get demo video URL from assignment
+            demo_video_url = None
+            demo_video_title = None
+            if workout and workout.assignment_id:
+                assignment = ExerciseVideoAssignment.query.get(workout.assignment_id)
+                if assignment and assignment.demo_video_id:
+                    demo = DemoVideo.query.get(assignment.demo_video_id)
+                    if demo:
+                        demo_video_url = demo.video_url
+                        demo_video_title = demo.title
+            
             result.append({
                 'id': sugg.id,
                 'exercise_type': sugg.exercise_type,
@@ -1537,7 +1551,10 @@ def get_my_suggestions():
                 'recommendation': {
                     'level': sugg.recommendation_level,
                     'message': sugg.recommendation_message
-                }
+                },
+                'patient_video_id': patient_video_id,
+                'demo_video_url': demo_video_url,
+                'demo_video_title': demo_video_title
             })
         
         return jsonify({
