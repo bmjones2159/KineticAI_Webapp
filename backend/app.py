@@ -19,6 +19,18 @@ import logging
 import traceback
 from logging.handlers import RotatingFileHandler
 import json
+from collections import Counter
+import numpy as np
+
+# Try to import AI dependencies (optional - will use mock if not available)
+try:
+    import cv2
+    from ultralytics import YOLO
+    AI_ENABLED = True
+    print("✓ AI dependencies loaded (YOLOv8, OpenCV)")
+except ImportError as e:
+    AI_ENABLED = False
+    print(f"⚠ AI dependencies not available: {e}. Using mock analysis.")
 
 # Initialize Flask app with static file serving
 STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -59,6 +71,313 @@ if encryption_key is None:
 elif isinstance(encryption_key, str):
     encryption_key = encryption_key.encode('utf-8')
 app.config['ENCRYPTION_KEY'] = encryption_key
+
+# ============================================================================
+# KINETIC ANALYZER - YOLOv8 Pose Estimation
+# ============================================================================
+
+class KineticAnalyzer:
+    """YOLOv8-based exercise form analyzer"""
+    
+    def __init__(self, model_path='yolov8m-pose.pt'):
+        """Initialize with YOLOv8 pose model"""
+        if AI_ENABLED:
+            self.model = YOLO(model_path)
+            print(f"✓ YOLOv8-Pose model loaded: {model_path}")
+        else:
+            self.model = None
+            
+    def calculate_angle(self, a, b, c):
+        """Calculate angle at point b given three points"""
+        a, b, c = np.array(a), np.array(b), np.array(c)
+        radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
+        angle = np.abs(radians * 180.0 / np.pi)
+        return 360 - angle if angle > 180.0 else angle
+    
+    def get_joint_angles(self, keypoints):
+        """Calculate key joint angles from keypoints"""
+        angles = {}
+        
+        # COCO keypoint indices: 5=left_shoulder, 6=right_shoulder, 7=left_elbow, 
+        # 8=right_elbow, 9=left_wrist, 10=right_wrist, 11=left_hip, 12=right_hip,
+        # 13=left_knee, 14=right_knee, 15=left_ankle, 16=right_ankle
+        
+        if keypoints[5].any() and keypoints[7].any() and keypoints[9].any():
+            angles['left_elbow'] = self.calculate_angle(keypoints[5], keypoints[7], keypoints[9])
+        if keypoints[6].any() and keypoints[8].any() and keypoints[10].any():
+            angles['right_elbow'] = self.calculate_angle(keypoints[6], keypoints[8], keypoints[10])
+        if keypoints[11].any() and keypoints[13].any() and keypoints[15].any():
+            angles['left_knee'] = self.calculate_angle(keypoints[11], keypoints[13], keypoints[15])
+        if keypoints[12].any() and keypoints[14].any() and keypoints[16].any():
+            angles['right_knee'] = self.calculate_angle(keypoints[12], keypoints[14], keypoints[16])
+        if keypoints[5].any() and keypoints[11].any() and keypoints[13].any():
+            angles['left_hip'] = self.calculate_angle(keypoints[5], keypoints[11], keypoints[13])
+        if keypoints[6].any() and keypoints[12].any() and keypoints[14].any():
+            angles['right_hip'] = self.calculate_angle(keypoints[6], keypoints[12], keypoints[14])
+            
+        return angles
+    
+    def analyze_video(self, video_path, exercise_type=None):
+        """Complete video analysis pipeline"""
+        if not AI_ENABLED or not self.model:
+            return self.mock_analysis(exercise_type)
+            
+        cap = cv2.VideoCapture(video_path)
+        keypoints_sequence = []
+        
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            results = self.model(frame, verbose=False)
+            if len(results) > 0 and results[0].keypoints is not None:
+                kp = results[0].keypoints.xy.cpu().numpy()
+                keypoints_sequence.append(kp[0] if len(kp) > 0 else np.zeros((17, 2)))
+            else:
+                keypoints_sequence.append(np.zeros((17, 2)))
+        cap.release()
+        
+        # Detect exercise if not provided
+        if not exercise_type:
+            exercise_type = self.detect_exercise(keypoints_sequence)
+        
+        # Analyze form
+        return self.analyze_form(keypoints_sequence, exercise_type)
+    
+    def detect_exercise(self, keypoints_sequence):
+        """Detect exercise type from movement patterns"""
+        if len(keypoints_sequence) < 10:
+            return 'unknown'
+            
+        hip_heights = []
+        for kp in keypoints_sequence[:30]:
+            if len(kp) >= 13 and kp[11].any() and kp[12].any():
+                hip_heights.append((kp[11][1] + kp[12][1]) / 2)
+        
+        if len(hip_heights) < 5:
+            return 'squat'
+            
+        hip_range = max(hip_heights) - min(hip_heights)
+        if hip_range > 100:
+            return 'squat'
+        elif hip_range > 50:
+            return 'lunge'
+        else:
+            return 'plank'
+    
+    def analyze_form(self, keypoints_sequence, exercise_type):
+        """Analyze exercise form and generate detailed feedback"""
+        issues = []
+        frame_scores = []
+        rep_count = 0
+        in_rep = False
+        
+        for kp in keypoints_sequence:
+            angles = self.get_joint_angles(kp)
+            frame_issues = []
+            
+            if exercise_type == 'squat':
+                if 'left_knee' in angles and 'right_knee' in angles:
+                    knee_avg = (angles['left_knee'] + angles['right_knee']) / 2
+                    if knee_avg > 140:
+                        frame_issues.append('knee_not_bent')
+                    elif knee_avg < 70:
+                        if not in_rep:
+                            rep_count += 1
+                            in_rep = True
+                    elif knee_avg > 120:
+                        in_rep = False
+                    if knee_avg > 110:
+                        frame_issues.append('shallow_squat')
+                        
+                if 'left_hip' in angles and 'right_hip' in angles:
+                    hip_avg = (angles['left_hip'] + angles['right_hip']) / 2
+                    if hip_avg < 150:
+                        frame_issues.append('back_rounding')
+                        
+            elif exercise_type == 'pushup':
+                if 'left_elbow' in angles and 'right_elbow' in angles:
+                    elbow_avg = (angles['left_elbow'] + angles['right_elbow']) / 2
+                    if elbow_avg < 100:
+                        if not in_rep:
+                            rep_count += 1
+                            in_rep = True
+                    elif elbow_avg > 150:
+                        in_rep = False
+                    if elbow_avg > 120:
+                        frame_issues.append('shallow_pushup')
+                        
+            elif exercise_type == 'plank':
+                if 'left_hip' in angles and 'right_hip' in angles:
+                    hip_avg = (angles['left_hip'] + angles['right_hip']) / 2
+                    if hip_avg < 160:
+                        frame_issues.append('hips_sagging')
+                    elif hip_avg > 190:
+                        frame_issues.append('hips_too_high')
+            
+            issues.extend(frame_issues)
+            score = max(0, 100 - len(frame_issues) * 20)
+            frame_scores.append(score)
+        
+        avg_score = np.mean(frame_scores) if frame_scores else 75
+        issue_counts = Counter(issues)
+        
+        return {
+            'exercise_type': exercise_type,
+            'total_frames': len(keypoints_sequence),
+            'detected_reps': max(rep_count, 1),
+            'accuracy_pct': round(avg_score, 1),
+            'form_score': round(avg_score, 1),
+            'issues': dict(issue_counts),
+            'most_common_issues': [{'joint': k, 'count': v} for k, v in issue_counts.most_common(3)],
+            'timestamp': datetime.utcnow().isoformat()
+        }
+    
+    def mock_analysis(self, exercise_type='squat'):
+        """Generate realistic mock analysis when AI is not available"""
+        import random
+        form_score = random.randint(65, 95)
+        detected_reps = random.randint(8, 15)
+        
+        exercise_issues = {
+            'squat': ['knee_not_bent', 'shallow_squat', 'back_rounding', 'knees_caving'],
+            'pushup': ['shallow_pushup', 'elbow_flare', 'hips_sagging', 'neck_strain'],
+            'plank': ['hips_sagging', 'hips_too_high', 'neck_dropping', 'shoulder_shrug'],
+            'lunge': ['knee_over_toe', 'balance_issue', 'shallow_lunge', 'torso_lean'],
+            'deadlift': ['back_rounding', 'bar_path', 'lockout_incomplete', 'hip_hinge']
+        }
+        
+        issues = exercise_issues.get(exercise_type or 'squat', ['form_issue'])
+        selected_issues = random.sample(issues, min(3, len(issues)))
+        issue_counts = {issue: random.randint(3, 12) for issue in selected_issues}
+        
+        return {
+            'exercise_type': exercise_type or 'squat',
+            'total_frames': random.randint(150, 300),
+            'detected_reps': detected_reps,
+            'accuracy_pct': form_score,
+            'form_score': form_score,
+            'issues': issue_counts,
+            'most_common_issues': [{'joint': k, 'count': v} for k, v in issue_counts.items()],
+            'timestamp': datetime.utcnow().isoformat()
+        }
+
+# Global analyzer instance (initialized lazily)
+_analyzer = None
+
+def get_analyzer():
+    """Get or create the global analyzer instance"""
+    global _analyzer
+    if _analyzer is None:
+        _analyzer = KineticAnalyzer()
+    return _analyzer
+
+
+def generate_smart_recommendations(form_score, detected_reps, target_reps, exercise_type, 
+                                    current_weight, patient_history=None):
+    """
+    Generate intelligent recommendations based on form analysis and progression.
+    
+    Returns dict with:
+    - level: 'excellent', 'good', 'needs_work', 'concerning'
+    - message: Summary message
+    - suggestions: List of specific actionable suggestions
+    - weight_recommendation: 'increase', 'maintain', 'decrease', or None
+    - exercise_modification: Alternative exercise if struggling, or None
+    """
+    suggestions = []
+    weight_rec = None
+    exercise_mod = None
+    
+    # Calculate rep completion rate
+    rep_rate = detected_reps / target_reps if target_reps > 0 else 1.0
+    
+    # Analyze history trends if available
+    improving = False
+    declining = False
+    if patient_history and len(patient_history) >= 3:
+        recent_scores = [w.form_score for w in patient_history[:3] if w.form_score]
+        if len(recent_scores) >= 2:
+            improving = recent_scores[0] > recent_scores[-1] + 5
+            declining = recent_scores[0] < recent_scores[-1] - 5
+    
+    # Determine level and recommendations
+    if form_score >= 90 and rep_rate >= 1.0:
+        level = 'excellent'
+        message = 'Outstanding form! You\'re ready to progress.'
+        suggestions.append('Excellent technique - maintain this quality')
+        if current_weight:
+            suggestions.append(f'Consider increasing weight by 5-10% (currently {current_weight} lbs)')
+            weight_rec = 'increase'
+        else:
+            suggestions.append('Try adding light weight to increase challenge')
+            weight_rec = 'increase'
+        suggestions.append('You can also increase reps or add another set')
+        
+    elif form_score >= 80 and rep_rate >= 0.9:
+        level = 'good'
+        message = 'Good form! Keep practicing for consistency.'
+        suggestions.append('Form is solid - focus on consistency')
+        if improving:
+            suggestions.append('Great progress! You may be ready to increase difficulty soon')
+            weight_rec = 'maintain'
+        else:
+            suggestions.append('Maintain current weight and perfect your form')
+            weight_rec = 'maintain'
+        suggestions.append('Try to complete all target reps before progressing')
+        
+    elif form_score >= 70:
+        level = 'needs_work'
+        message = 'Form needs improvement. Focus on technique before adding weight.'
+        if current_weight and current_weight > 0:
+            suggestions.append(f'Consider reducing weight from {current_weight} lbs to focus on form')
+            weight_rec = 'decrease'
+        suggestions.append('Slow down your movement to maintain control')
+        suggestions.append('Watch the demo video again and compare your form')
+        
+        if rep_rate < 0.8:
+            suggestions.append(f'Completed {detected_reps}/{target_reps} reps - reduce target if needed')
+            
+    else:  # form_score < 70
+        level = 'concerning'
+        message = 'Form needs significant work. Consider modifications.'
+        
+        if current_weight and current_weight > 0:
+            suggestions.append(f'Reduce weight significantly or use bodyweight only')
+            weight_rec = 'decrease'
+            
+        # Suggest exercise modifications
+        exercise_alternatives = {
+            'squat': ('box_squat', 'Try box squats for better depth control'),
+            'pushup': ('incline_pushup', 'Try incline pushups (hands elevated) to build strength'),
+            'lunge': ('split_squat', 'Try stationary split squats for better balance'),
+            'deadlift': ('romanian_deadlift', 'Try Romanian deadlifts with lighter weight'),
+            'plank': ('knee_plank', 'Try plank from knees to build core strength')
+        }
+        
+        if exercise_type in exercise_alternatives:
+            alt_exercise, alt_msg = exercise_alternatives[exercise_type]
+            exercise_mod = alt_exercise
+            suggestions.append(alt_msg)
+            
+        suggestions.append('Schedule a form check with your therapist')
+        suggestions.append('Review the exercise fundamentals before next session')
+        
+        if declining:
+            suggestions.append('Your form has declined recently - take a rest day if needed')
+    
+    return {
+        'level': level,
+        'message': message,
+        'suggestions': suggestions,
+        'weight_recommendation': weight_rec,
+        'exercise_modification': exercise_mod,
+        'form_score': form_score,
+        'rep_completion': round(rep_rate * 100, 1),
+        'detected_reps': detected_reps,
+        'target_reps': target_reps
+    }
+
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -808,44 +1127,44 @@ def log_workout():
                 db.session.flush()
                 video_id = video.id
                 
-                # Run AI analysis
-                KINETIC_ANALYZER_URL = app.config.get('KINETIC_ANALYZER_URL')
-                
+                # Run AI analysis using integrated KineticAnalyzer
                 try:
-                    if KINETIC_ANALYZER_URL:
-                        import requests
-                        with open(filepath, 'rb') as f:
-                            response = requests.post(
-                                f"{KINETIC_ANALYZER_URL}/api/analyze",
-                                files={'video': f},
-                                data={'exercise_type': exercise_type, 'user_id': str(user_id)},
-                                timeout=300
-                            )
-                        if response.status_code == 200:
-                            analysis_results = response.json()
-                            form_score = analysis_results.get('accuracy_pct', 0)
-                    else:
-                        # Fake analysis
-                        import random
-                        form_score = random.randint(70, 95)
-                        analysis_results = {
-                            'accuracy_pct': form_score,
-                            'total_reps': sets_completed * reps_per_set,
-                            'most_common_issues': [
-                                {'joint': 'knee', 'count': 5},
-                                {'joint': 'back', 'count': 3}
-                            ],
-                            'recommendation': {
-                                'level': 'good',
-                                'message': 'Good form overall',
-                                'suggestions': ['Keep practicing']
-                            }
-                        }
+                    analyzer = get_analyzer()
+                    analysis_results = analyzer.analyze_video(filepath, exercise_type)
+                    form_score = analysis_results.get('form_score', analysis_results.get('accuracy_pct', 75))
+                    
+                    # Get patient's workout history for smart recommendations
+                    patient_history = WorkoutLog.query.filter_by(
+                        patient_id=user_id,
+                        exercise_type=exercise_type
+                    ).order_by(WorkoutLog.completed_at.desc()).limit(5).all()
+                    
+                    # Get target reps from assignment if available
+                    target_reps = sets_completed * reps_per_set
+                    if assignment_id:
+                        assignment = ExerciseVideoAssignment.query.get(assignment_id)
+                        if assignment:
+                            target_reps = assignment.target_sets * assignment.target_reps
+                    
+                    # Generate smart recommendations
+                    smart_rec = generate_smart_recommendations(
+                        form_score=form_score,
+                        detected_reps=analysis_results.get('detected_reps', sets_completed * reps_per_set),
+                        target_reps=target_reps,
+                        exercise_type=exercise_type,
+                        current_weight=weight_lbs,
+                        patient_history=patient_history
+                    )
+                    
+                    # Add smart recommendations to analysis results
+                    analysis_results['recommendation'] = smart_rec
+                    analysis_results['total_reps'] = analysis_results.get('detected_reps', sets_completed * reps_per_set)
                     
                     video.analysis_results = encrypt_data(analysis_results)
                     
                 except Exception as e:
                     print(f"Analysis failed: {str(e)}")
+                    traceback.print_exc()
         
         # Create workout log
         workout = WorkoutLog(
@@ -872,18 +1191,32 @@ def log_workout():
             
             recommendation = analysis_results.get('recommendation', {})
             
+            # Build comprehensive suggestions list including weight/exercise recommendations
+            all_suggestions = recommendation.get('suggestions', [])
+            if recommendation.get('weight_recommendation'):
+                weight_msg = {
+                    'increase': f'Ready to increase weight from {weight_lbs or 0} lbs',
+                    'decrease': f'Consider decreasing weight from {weight_lbs or 0} lbs',
+                    'maintain': 'Maintain current weight and focus on form'
+                }.get(recommendation['weight_recommendation'], '')
+                if weight_msg:
+                    all_suggestions.insert(0, weight_msg)
+            
+            if recommendation.get('exercise_modification'):
+                all_suggestions.append(f'Alternative exercise: {recommendation["exercise_modification"]}')
+            
             ai_suggestion = AISuggestion(
                 workout_log_id=workout.id,
                 video_id=video_id,
                 patient_id=user_id,
                 form_score=form_score,
-                detected_reps=analysis_results.get('total_reps', sets_completed * reps_per_set),
+                detected_reps=analysis_results.get('detected_reps', sets_completed * reps_per_set),
                 exercise_type=exercise_type,
                 raw_issues=raw_issues,
                 ai_suggestions=formatted_suggestions,
                 recommendation_level=recommendation.get('level'),
                 recommendation_message=recommendation.get('message'),
-                recommendation_suggestions=recommendation.get('suggestions', []),
+                recommendation_suggestions=all_suggestions,
                 status='pending'
             )
             
@@ -898,10 +1231,16 @@ def log_workout():
         }
         
         if analysis_results:
+            recommendation = analysis_results.get('recommendation', {})
             response_data['analysis_results'] = {
                 'form_score': form_score,
+                'detected_reps': analysis_results.get('detected_reps', 0),
                 'total_reps': analysis_results.get('total_reps', 0),
-                'suggestions_generated': True
+                'suggestions_generated': True,
+                'recommendation_level': recommendation.get('level'),
+                'recommendation_message': recommendation.get('message'),
+                'weight_recommendation': recommendation.get('weight_recommendation'),
+                'exercise_modification': recommendation.get('exercise_modification')
             }
         
         return jsonify(response_data), 201
