@@ -1168,6 +1168,16 @@ def log_workout():
         duration_seconds = request.form.get('duration_seconds', type=int)
         notes = request.form.get('notes')
         
+        # Parse workout date (defaults to today)
+        workout_date_str = request.form.get('workout_date')
+        if workout_date_str:
+            try:
+                workout_date = datetime.strptime(workout_date_str, '%Y-%m-%d').date()
+            except:
+                workout_date = datetime.utcnow().date()
+        else:
+            workout_date = datetime.utcnow().date()
+        
         if not exercise_type or not sets_completed or not reps_per_set:
             return jsonify({'error': 'Missing required fields'}), 400
         
@@ -1269,7 +1279,7 @@ def log_workout():
             duration_seconds=duration_seconds,
             notes=notes,
             video_id=video_id,
-            workout_date=datetime.utcnow().date(),
+            workout_date=workout_date,
             form_score=form_score
         )
         
@@ -1450,11 +1460,19 @@ def get_patient_assigned_exercises():
                         pass
             
             week_ago = datetime.utcnow() - timedelta(days=7)
-            times_completed = WorkoutLog.query.filter(
+            
+            # Sum total sets completed this week (not just count of workout entries)
+            workouts_this_week = WorkoutLog.query.filter(
                 WorkoutLog.patient_id == current_user_id,
                 WorkoutLog.assignment_id == assignment.id,
                 WorkoutLog.completed_at >= week_ago
-            ).count()
+            ).all()
+            
+            sets_completed_this_week = sum(w.sets_completed or 0 for w in workouts_this_week)
+            times_completed = len(workouts_this_week)  # Number of workout sessions
+            
+            # Calculate target: sets per session * sessions per week
+            target_sets_per_week = (assignment.target_sets or 3) * (assignment.frequency_per_week or 3)
             
             last_workout = WorkoutLog.query.filter_by(
                 patient_id=current_user_id,
@@ -1474,6 +1492,8 @@ def get_patient_assigned_exercises():
                 'completed': assignment.completed,
                 'assigned_at': assignment.assigned_at.isoformat(),
                 'times_completed': times_completed,
+                'sets_completed_this_week': sets_completed_this_week,
+                'target_sets_per_week': target_sets_per_week,
                 'last_completed': last_workout.completed_at.isoformat() if last_workout else None,
                 'video': video_info,
                 'demo_video_url': demo_video_url,
