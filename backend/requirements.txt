@@ -22,7 +22,9 @@ Werkzeug==2.3.7
 # Production Server
 gunicorn==21.2.0
 
-# Optional: For AI analysis (if running locally)
-# ultralytics==8.0.196
-# opencv-python==4.8.1.78
-# numpy==1.24.3
+# AI Analysis - YOLOv8 Pose Estimation
+ultralytics==8.0.196
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
+torch==2.1.0
+torchvision==0.16.0
