@@ -1606,6 +1606,51 @@ def create_patient():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/therapist/patients/<int:patient_id>', methods=['DELETE'])
+@jwt_required()
+def delete_patient(patient_id):
+    """Delete a patient (therapist only)"""
+    try:
+        current_user_id = int(get_jwt_identity())
+        user = User.query.get(current_user_id)
+        
+        if user.role not in ['clinician', 'admin']:
+            return jsonify({'error': 'Only therapists can delete patients'}), 403
+        
+        profile = PatientProfile.query.get(patient_id)
+        if not profile:
+            return jsonify({'error': 'Patient not found'}), 404
+        
+        # Check therapist owns this patient (unless admin)
+        if user.role != 'admin' and profile.assigned_therapist_id != current_user_id:
+            return jsonify({'error': 'You can only delete your own patients'}), 403
+        
+        patient_user_id = profile.user_id
+        patient_name = profile.full_name
+        
+        # Delete related records first
+        AISuggestion.query.filter_by(patient_id=patient_user_id).delete()
+        WorkoutLog.query.filter_by(patient_id=patient_user_id).delete()
+        ExerciseVideoAssignment.query.filter_by(patient_id=patient_user_id).delete()
+        Video.query.filter_by(user_id=patient_user_id).delete()
+        
+        # Delete profile and user
+        db.session.delete(profile)
+        patient_user = User.query.get(patient_user_id)
+        if patient_user:
+            db.session.delete(patient_user)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Patient {patient_name} deleted successfully',
+            'deleted_patient_id': patient_id
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/therapist/patients', methods=['GET'])
 @jwt_required()
 def get_therapist_patients():
