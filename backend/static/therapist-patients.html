@@ -1073,14 +1073,73 @@
 
                 const result = await response.json();
                 
-                showToast(`Patient created! Temp password: ${result.temporary_password}`, 'success');
                 closeModal('createPatientModal');
+                
+                // Show credentials modal
+                showCredentialsModal(result.username, result.temporary_password, document.getElementById('patientFullName').value);
+                
                 loadPatients();
 
             } catch (error) {
                 console.error('Error creating patient:', error);
                 showToast(error.message, 'error');
             }
+        }
+        
+        function showCredentialsModal(username, password, fullName) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('credentialsModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'credentialsModal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 450px;">
+                        <div class="modal-header">
+                            <h2 class="modal-title">✅ Patient Created Successfully</h2>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            <p style="margin-bottom: 1rem; color: var(--gray-600);">
+                                Share these login credentials with <strong id="credPatientName"></strong>:
+                            </p>
+                            <div style="background: var(--gray-100); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                                <div style="margin-bottom: 0.75rem;">
+                                    <label style="font-size: 0.875rem; color: var(--gray-600);">Username</label>
+                                    <div style="font-size: 1.25rem; font-weight: 600; font-family: monospace; color: var(--primary);" id="credUsername"></div>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.875rem; color: var(--gray-600);">Temporary Password</label>
+                                    <div style="font-size: 1.25rem; font-weight: 600; font-family: monospace; color: var(--primary);" id="credPassword"></div>
+                                </div>
+                            </div>
+                            <p style="font-size: 0.875rem; color: var(--warning); margin-bottom: 1rem;">
+                                ⚠️ Please save these credentials now. The password cannot be recovered later.
+                            </p>
+                            <button class="btn btn-primary" style="width: 100%;" onclick="copyCredentials(); closeModal('credentialsModal');">
+                                📋 Copy & Close
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('credPatientName').textContent = fullName || username;
+            document.getElementById('credUsername').textContent = username;
+            document.getElementById('credPassword').textContent = password;
+            modal.classList.add('active');
+        }
+        
+        function copyCredentials() {
+            const username = document.getElementById('credUsername').textContent;
+            const password = document.getElementById('credPassword').textContent;
+            const text = `Username: ${username}\nPassword: ${password}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Credentials copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Could not copy - please write down the credentials', 'warning');
+            });
         }
 
         async function assignExercise() {
