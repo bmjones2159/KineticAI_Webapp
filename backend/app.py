@@ -1627,6 +1627,18 @@ def migrate_database():
             else:
                 migrations.append("demo_video_id already exists")
             
+            # Make video_id nullable (it can be NULL when using demo_video_id)
+            try:
+                conn.execute(db.text("""
+                    ALTER TABLE exercise_video_assignments 
+                    ALTER COLUMN video_id DROP NOT NULL
+                """))
+                conn.commit()
+                migrations.append("Made video_id nullable")
+            except Exception as e:
+                if "does not exist" not in str(e).lower():
+                    migrations.append(f"video_id nullable: {str(e)}")
+            
             # Check and add assignment_id column to workout_logs
             result = conn.execute(db.text("""
                 SELECT column_name FROM information_schema.columns 
