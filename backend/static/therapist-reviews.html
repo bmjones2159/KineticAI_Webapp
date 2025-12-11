@@ -469,6 +469,33 @@
             font-size: 1rem;
         }
         
+        /* AI Feedback Text Section */
+        .ai-feedback-section {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .ai-feedback-section .section-title {
+            color: #00d4ff;
+            margin-bottom: 0.75rem;
+        }
+        
+        .ai-feedback-text {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            border-left: 3px solid #00d4ff;
+        }
+        
         /* AI Suggestions Section */
         .suggestions-section {
             background: var(--gray-50);
@@ -1036,10 +1063,18 @@
                         `}
                     </div>
 
+                    <!-- AI Feedback Text -->
+                    ${sugg.ai_feedback_text ? `
+                        <div class="ai-feedback-section">
+                            <div class="section-title">🤖 AI Analysis Summary</div>
+                            <pre class="ai-feedback-text">${sugg.ai_feedback_text}</pre>
+                        </div>
+                    ` : ''}
+
                     <!-- AI Suggestions -->
                     ${aiSuggestions.length > 0 ? `
                         <div class="suggestions-section">
-                            <div class="section-title">🤖 AI-Generated Suggestions</div>
+                            <div class="section-title">📋 Specific Issues Detected</div>
                             ${aiSuggestions.map((s, i) => `
                                 <div class="suggestion-item ${s.priority || 'medium'}">
                                     <input type="checkbox" class="suggestion-checkbox" 
