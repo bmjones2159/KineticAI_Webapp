@@ -2329,12 +2329,49 @@ def seed_demo_data():
         db.session.rollback()
         print(f"  Note: Demo data seeding skipped or partial: {e}")
 
+def run_migrations():
+    """Run database migrations for schema updates"""
+    try:
+        with db.engine.connect() as conn:
+            # Add assignment_id to workout_logs if missing
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'workout_logs' AND column_name = 'assignment_id'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE workout_logs 
+                    ADD COLUMN assignment_id INTEGER REFERENCES exercise_video_assignments(id)
+                """))
+                conn.commit()
+                print("✓ Migration: Added assignment_id to workout_logs")
+            
+            # Add file columns to videos if missing
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'file_path'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN file_path VARCHAR(500),
+                    ADD COLUMN file_hash VARCHAR(64),
+                    ADD COLUMN file_size INTEGER,
+                    ADD COLUMN mime_type VARCHAR(100)
+                """))
+                conn.commit()
+                print("✓ Migration: Added file columns to videos")
+                
+    except Exception as e:
+        print(f"  Migration note: {e}")
+
 def init_db():
     """Initialize database tables and seed demo data"""
     try:
         with app.app_context():
             db.create_all()
             print("✓ Database tables created")
+            run_migrations()
             seed_demo_data()
     except Exception as e:
         print(f"✗ Database initialization error: {e}")
