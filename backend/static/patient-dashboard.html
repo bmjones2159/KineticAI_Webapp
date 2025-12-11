@@ -707,6 +707,18 @@
 
         <!-- Assigned Exercises Tab -->
         <div class="tab-content active" id="assignedTab">
+            <!-- Day Selector -->
+            <div class="day-selector-container">
+                <div class="day-selector" id="daySelector">
+                    <!-- Days will be populated by JS -->
+                </div>
+                <div class="week-nav">
+                    <button class="week-nav-btn" onclick="changeWeek(-1)">‹ Prev</button>
+                    <span class="week-label" id="weekLabel">This Week</span>
+                    <button class="week-nav-btn" onclick="changeWeek(1)">Next ›</button>
+                </div>
+            </div>
+            
             <div id="assignedExercises">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -736,9 +748,97 @@
         </div>
     </div>
 
+    <style>
+        .day-selector-container {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .day-selector {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .day-btn {
+            flex: 1;
+            padding: 0.75rem 0.5rem;
+            border: 2px solid var(--gray-200);
+            background: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .day-btn:hover {
+            border-color: var(--primary-light);
+            background: var(--gray-50);
+        }
+        .day-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .day-btn.has-workout {
+            border-color: var(--success);
+        }
+        .day-btn.has-workout::after {
+            content: '✓';
+            display: block;
+            font-size: 0.75rem;
+            color: var(--success);
+        }
+        .day-btn.active.has-workout::after {
+            color: white;
+        }
+        .day-name {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        .day-date {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0.25rem 0;
+        }
+        .day-btn.today .day-name {
+            color: var(--primary);
+        }
+        .day-btn.active .day-name,
+        .day-btn.active .day-date {
+            color: white;
+        }
+        .week-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+        .week-nav-btn {
+            padding: 0.25rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            background: white;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .week-nav-btn:hover {
+            background: var(--gray-100);
+        }
+        .week-label {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            min-width: 100px;
+            text-align: center;
+        }
+    </style>
+
     <!-- Log Workout Modal -->
     <div class="modal" id="logWorkoutModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Log Workout</h2>
                 <button class="modal-close" onclick="closeModal()">×</button>
@@ -747,27 +847,27 @@
                 <form id="logWorkoutForm">
                     <input type="hidden" id="assignmentId">
                     <input type="hidden" id="exerciseType">
+                    <input type="hidden" id="targetSets">
+                    <input type="hidden" id="targetReps">
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Sets Completed *</label>
-                            <input type="number" class="form-input" id="setsCompleted" min="1" required>
+                    <!-- Sets Container -->
+                    <div class="sets-container" id="setsContainer">
+                        <div class="sets-header">
+                            <span class="sets-title">🏋️ Sets</span>
+                            <span class="sets-count" id="setsCount">0 sets logged</span>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Reps per Set *</label>
-                            <input type="number" class="form-input" id="repsPerSet" min="1" required>
+                        <div id="setsList">
+                            <!-- Sets will be added here dynamically -->
                         </div>
+                        <button type="button" class="btn btn-add-set" id="addSetBtn" onclick="addSet()">
+                            ➕ Add Set
+                        </button>
                     </div>
                     
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Weight (lbs)</label>
-                            <input type="number" class="form-input" id="weightLbs" step="0.5" placeholder="Optional">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Duration (min)</label>
-                            <input type="number" class="form-input" id="durationMin" step="1" placeholder="Optional">
-                        </div>
+                    <!-- Weight (applies to all sets) -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label class="form-label">Weight (lbs) - applies to all sets</label>
+                        <input type="number" class="form-input" id="weightLbs" step="0.5" placeholder="Optional">
                     </div>
                     
                     <div class="form-group">
@@ -802,16 +902,252 @@
         </div>
     </div>
 
+    <style>
+        .sets-container {
+            background: var(--gray-50);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .sets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .sets-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .sets-count {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        .set-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--gray-200);
+        }
+        .set-item.completed {
+            border-color: var(--success);
+            background: #f0fdf4;
+        }
+        .set-number {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+        .set-item.completed .set-number {
+            background: var(--success);
+        }
+        .set-inputs {
+            display: flex;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        .set-input {
+            width: 70px;
+            padding: 0.5rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .set-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .set-label {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            text-align: center;
+        }
+        .set-input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .set-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .set-complete-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--gray-300);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .set-complete-btn:hover {
+            border-color: var(--success);
+            background: #f0fdf4;
+        }
+        .set-complete-btn.completed {
+            border-color: var(--success);
+            background: var(--success);
+            color: white;
+        }
+        .set-remove-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: var(--gray-200);
+            color: var(--gray-600);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .set-remove-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-add-set {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px dashed var(--gray-300);
+            background: white;
+            color: var(--primary);
+            font-weight: 500;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-add-set:hover {
+            border-color: var(--primary);
+            background: var(--gray-50);
+        }
+    </style>
+
     <script>
         const API_URL = window.location.origin;
         let currentUser = null;
         let selectedVideoFile = null;
+        let workoutSets = []; // Array to track sets
+        let selectedDate = new Date(); // Currently selected date
+        let weekOffset = 0; // 0 = this week, -1 = last week, etc.
+        let workoutDates = new Set(); // Dates that have workouts
 
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
+            initDaySelector();
             loadDashboard();
             setupVideoUpload();
         });
+
+        function initDaySelector() {
+            renderDaySelector();
+        }
+
+        function renderDaySelector() {
+            const container = document.getElementById('daySelector');
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            // Get start of week (Sunday)
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
+            
+            // Update week label
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            
+            if (weekOffset === 0) {
+                document.getElementById('weekLabel').textContent = 'This Week';
+            } else if (weekOffset === -1) {
+                document.getElementById('weekLabel').textContent = 'Last Week';
+            } else {
+                document.getElementById('weekLabel').textContent = 
+                    `${startOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})} - ${endOfWeek.toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}`;
+            }
+            
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startOfWeek);
+                date.setDate(startOfWeek.getDate() + i);
+                
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = date.toDateString() === selectedDate.toDateString();
+                const dateStr = date.toISOString().split('T')[0];
+                const hasWorkout = workoutDates.has(dateStr);
+                
+                const btn = document.createElement('button');
+                btn.className = `day-btn${isToday ? ' today' : ''}${isSelected ? ' active' : ''}${hasWorkout ? ' has-workout' : ''}`;
+                btn.onclick = () => selectDay(date);
+                btn.innerHTML = `
+                    <div class="day-name">${days[date.getDay()]}</div>
+                    <div class="day-date">${date.getDate()}</div>
+                `;
+                container.appendChild(btn);
+            }
+        }
+
+        function selectDay(date) {
+            selectedDate = new Date(date);
+            renderDaySelector();
+            // Could filter exercises by day here if needed
+        }
+
+        function changeWeek(direction) {
+            weekOffset += direction;
+            
+            // Adjust selected date to same day of new week
+            const dayOfWeek = selectedDate.getDay();
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            startOfWeek.setDate(today.getDate() - today.getDay() + (weekOffset * 7));
+            selectedDate = new Date(startOfWeek);
+            selectedDate.setDate(startOfWeek.getDate() + dayOfWeek);
+            
+            renderDaySelector();
+        }
+
+        async function loadWorkoutDatesForWeek() {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/patient/workouts/history?limit=50`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    workoutDates.clear();
+                    (data.workouts || []).forEach(w => {
+                        if (w.completed_at) {
+                            const dateStr = new Date(w.completed_at).toISOString().split('T')[0];
+                            workoutDates.add(dateStr);
+                        }
+                    });
+                    renderDaySelector();
+                }
+            } catch (error) {
+                console.error('Error loading workout dates:', error);
+            }
+        }
 
         function checkAuth() {
             const token = localStorage.getItem('token');
@@ -844,6 +1180,7 @@
             await loadStats();
             await loadAssignedExercises();
             await loadFeedback();
+            await loadWorkoutDatesForWeek();
         }
 
         async function loadUserInfo() {
@@ -930,9 +1267,10 @@
             }
 
             container.innerHTML = '<div class="exercise-grid">' + exercises.map(ex => {
-                const progress = ex.times_completed || 0;
-                const target = ex.frequency_per_week || 3;
-                const percentage = Math.min(100, (progress / target) * 100);
+                // Progress based on sets completed vs target sets per week
+                const setsCompleted = ex.sets_completed_this_week || 0;
+                const targetSets = ex.target_sets_per_week || ((ex.target_sets || 3) * (ex.frequency_per_week || 3));
+                const percentage = Math.min(100, (setsCompleted / targetSets) * 100);
                 const exerciseType = ex.exercise_type || 'Exercise';
                 
                 return `
@@ -970,8 +1308,8 @@
 
                         <div class="progress-section">
                             <div class="progress-header">
-                                <span>Progress This Week</span>
-                                <span>${progress}/${target}</span>
+                                <span>Sets This Week</span>
+                                <span>${setsCompleted}/${targetSets} sets</span>
                             </div>
                             <div class="progress-bar">
                                 <div class="progress-fill" style="width: ${percentage}%"></div>
@@ -1171,15 +1509,108 @@
         function openLogModal(assignmentId, exerciseType, targetSets, targetReps) {
             document.getElementById('assignmentId').value = assignmentId;
             document.getElementById('exerciseType').value = exerciseType;
+            document.getElementById('targetSets').value = targetSets;
+            document.getElementById('targetReps').value = targetReps;
+            
+            // Show selected date in modal title
+            const dateStr = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             document.getElementById('modalTitle').textContent = `Log Workout: ${exerciseType.toUpperCase()}`;
-            document.getElementById('setsCompleted').value = targetSets;
-            document.getElementById('repsPerSet').value = targetReps;
+            document.getElementById('modalTitle').innerHTML = `Log Workout: ${exerciseType.toUpperCase()}<br><span style="font-size: 0.875rem; font-weight: normal; color: var(--gray-600);">📅 ${dateStr}</span>`;
+            
+            // Reset sets and add initial sets based on target
+            workoutSets = [];
+            document.getElementById('setsList').innerHTML = '';
+            
+            // Pre-populate with target number of sets
+            for (let i = 0; i < targetSets; i++) {
+                addSet(targetReps);
+            }
+            
             document.getElementById('logWorkoutModal').classList.add('active');
+        }
+
+        function addSet(defaultReps = null) {
+            const targetReps = defaultReps || parseInt(document.getElementById('targetReps').value) || 12;
+            const setNumber = workoutSets.length + 1;
+            
+            const setData = {
+                id: Date.now(),
+                reps: targetReps,
+                completed: false
+            };
+            workoutSets.push(setData);
+            
+            const setHtml = `
+                <div class="set-item" id="set-${setData.id}">
+                    <div class="set-number">${setNumber}</div>
+                    <div class="set-inputs">
+                        <div class="set-input-group">
+                            <input type="number" class="set-input" value="${targetReps}" min="1" 
+                                   onchange="updateSetReps(${setData.id}, this.value)">
+                            <span class="set-label">reps</span>
+                        </div>
+                    </div>
+                    <div class="set-status">
+                        <button type="button" class="set-complete-btn" id="complete-${setData.id}" 
+                                onclick="toggleSetComplete(${setData.id})">
+                            ✓
+                        </button>
+                        <button type="button" class="set-remove-btn" onclick="removeSet(${setData.id})">×</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('setsList').insertAdjacentHTML('beforeend', setHtml);
+            updateSetsCount();
+        }
+
+        function updateSetReps(setId, reps) {
+            const set = workoutSets.find(s => s.id === setId);
+            if (set) {
+                set.reps = parseInt(reps) || 0;
+            }
+        }
+
+        function toggleSetComplete(setId) {
+            const set = workoutSets.find(s => s.id === setId);
+            if (set) {
+                set.completed = !set.completed;
+                const setEl = document.getElementById(`set-${setId}`);
+                const btnEl = document.getElementById(`complete-${setId}`);
+                
+                if (set.completed) {
+                    setEl.classList.add('completed');
+                    btnEl.classList.add('completed');
+                } else {
+                    setEl.classList.remove('completed');
+                    btnEl.classList.remove('completed');
+                }
+                updateSetsCount();
+            }
+        }
+
+        function removeSet(setId) {
+            workoutSets = workoutSets.filter(s => s.id !== setId);
+            document.getElementById(`set-${setId}`).remove();
+            
+            // Renumber remaining sets
+            document.querySelectorAll('#setsList .set-item').forEach((el, i) => {
+                el.querySelector('.set-number').textContent = i + 1;
+            });
+            updateSetsCount();
+        }
+
+        function updateSetsCount() {
+            const completed = workoutSets.filter(s => s.completed).length;
+            const total = workoutSets.length;
+            document.getElementById('setsCount').textContent = `${completed}/${total} sets completed`;
         }
 
         function closeModal() {
             document.getElementById('logWorkoutModal').classList.remove('active');
             document.getElementById('logWorkoutForm').reset();
+            workoutSets = [];
+            document.getElementById('setsList').innerHTML = '';
             removeVideo();
             document.getElementById('analysisResultsContainer').style.display = 'none';
         }
@@ -1228,22 +1659,34 @@
         }
 
         async function submitWorkout() {
+            // Only count completed sets
+            const completedSets = workoutSets.filter(s => s.completed);
+            
+            if (completedSets.length === 0) {
+                alert('Please complete at least one set before saving.');
+                return;
+            }
+
             try {
                 const submitBtn = document.getElementById('submitBtn');
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<div class="spinner" style="width:16px;height:16px;"></div> Saving...';
 
+                // Calculate average reps from completed sets
+                const totalReps = completedSets.reduce((sum, s) => sum + s.reps, 0);
+                const avgReps = Math.round(totalReps / completedSets.length);
+
                 const formData = new FormData();
                 formData.append('assignment_id', document.getElementById('assignmentId').value);
                 formData.append('exercise_type', document.getElementById('exerciseType').value);
-                formData.append('sets_completed', document.getElementById('setsCompleted').value);
-                formData.append('reps_per_set', document.getElementById('repsPerSet').value);
+                formData.append('sets_completed', completedSets.length);
+                formData.append('reps_per_set', avgReps);
+                
+                // Send selected date for the workout
+                formData.append('workout_date', selectedDate.toISOString().split('T')[0]);
                 
                 const weight = document.getElementById('weightLbs').value;
                 if (weight) formData.append('weight_lbs', weight);
-                
-                const duration = document.getElementById('durationMin').value;
-                if (duration) formData.append('duration_seconds', duration * 60);
                 
                 const notes = document.getElementById('workoutNotes').value;
                 if (notes) formData.append('notes', notes);
