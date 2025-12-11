@@ -1610,9 +1610,8 @@ def migrate_database():
     try:
         migrations = []
         
-        # Check and add demo_video_id column to exercise_video_assignments
         with db.engine.connect() as conn:
-            # Check if column exists
+            # Check and add demo_video_id column to exercise_video_assignments
             result = conn.execute(db.text("""
                 SELECT column_name FROM information_schema.columns 
                 WHERE table_name = 'exercise_video_assignments' AND column_name = 'demo_video_id'
@@ -1636,8 +1635,8 @@ def migrate_database():
                 conn.commit()
                 migrations.append("Made video_id nullable")
             except Exception as e:
-                if "does not exist" not in str(e).lower():
-                    migrations.append(f"video_id nullable: {str(e)}")
+                if "already" not in str(e).lower():
+                    migrations.append(f"video_id nullable: already done or {str(e)[:50]}")
             
             # Check and add assignment_id column to workout_logs
             result = conn.execute(db.text("""
@@ -1653,6 +1652,81 @@ def migrate_database():
                 migrations.append("Added assignment_id to workout_logs")
             else:
                 migrations.append("assignment_id already exists")
+            
+            # Check and add file_path column to videos
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'file_path'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN file_path VARCHAR(500)
+                """))
+                conn.commit()
+                migrations.append("Added file_path to videos")
+            else:
+                migrations.append("file_path already exists")
+            
+            # Check and add file_hash column to videos
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'file_hash'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN file_hash VARCHAR(64)
+                """))
+                conn.commit()
+                migrations.append("Added file_hash to videos")
+            else:
+                migrations.append("file_hash already exists")
+            
+            # Check and add file_size column to videos
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'file_size'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN file_size BIGINT
+                """))
+                conn.commit()
+                migrations.append("Added file_size to videos")
+            else:
+                migrations.append("file_size already exists")
+            
+            # Check and add mime_type column to videos
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'mime_type'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN mime_type VARCHAR(100)
+                """))
+                conn.commit()
+                migrations.append("Added mime_type to videos")
+            else:
+                migrations.append("mime_type already exists")
+                
+            # Check and add patient_id column to videos
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'videos' AND column_name = 'patient_id'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE videos 
+                    ADD COLUMN patient_id INTEGER
+                """))
+                conn.commit()
+                migrations.append("Added patient_id to videos")
+            else:
+                migrations.append("patient_id already exists")
         
         return jsonify({'message': 'Database migration complete', 'migrations': migrations}), 200
     except Exception as e:
