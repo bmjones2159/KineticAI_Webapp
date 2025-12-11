@@ -966,6 +966,9 @@
                             <button class="btn btn-secondary btn-sm" onclick="viewPatientWorkouts(${p.user_id})">
                                 📊 View Workouts
                             </button>
+                            <button class="btn btn-sm" style="background: var(--danger); color: white;" onclick="deletePatient(${p.id}, '${p.full_name || p.username}')">
+                                🗑️ Delete
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1187,6 +1190,35 @@
         function viewPatientWorkouts(patientId) {
             // Could open a modal or navigate to patient detail page
             window.location.href = `therapist-reviews.html?patient=${patientId}`;
+        }
+
+        async function deletePatient(patientId, patientName) {
+            if (!confirm(`Are you sure you want to delete ${patientName}?\n\nThis will permanently remove:\n• Patient account\n• All workout logs\n• All AI suggestions\n• All assigned exercises\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`${API_URL}/api/therapist/patients/${patientId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete patient');
+                }
+                
+                const result = await response.json();
+                showToast(result.message || 'Patient deleted successfully', 'success');
+                loadPatients(); // Refresh the list
+                
+            } catch (error) {
+                console.error('Error deleting patient:', error);
+                showToast(error.message, 'error');
+            }
         }
 
         function showToast(message, type) {
