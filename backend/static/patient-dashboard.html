@@ -353,6 +353,69 @@
         .feedback-score.good { background: #fef3c7; color: #92400e; }
         .feedback-score.needs-work { background: #fee2e2; color: #991b1b; }
         
+        /* Video Comparison Styles */
+        .video-comparison {
+            margin: 1rem 0;
+            background: var(--gray-900);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+        
+        .video-comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .video-comparison-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .video-panel {
+            background: var(--gray-800);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .video-panel-label {
+            padding: 0.5rem 0.75rem;
+            background: var(--gray-700);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .comparison-video {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: black;
+            display: block;
+        }
+        
+        .demo-video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        }
+        
+        .comparison-video-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .video-sync-hint {
+            margin-top: 0.75rem;
+            text-align: center;
+            color: var(--gray-400);
+            font-size: 0.75rem;
+        }
+        
         .suggestion-list {
             margin: 1rem 0;
         }
@@ -1380,6 +1443,12 @@
             container.innerHTML = suggestions.map(sugg => {
                 const scoreClass = sugg.form_score >= 85 ? 'excellent' : sugg.form_score >= 70 ? 'good' : 'needs-work';
                 const feedbackItems = sugg.suggestions || [];
+                const token = localStorage.getItem('token');
+                
+                // Check if we have videos to compare
+                const hasPatientVideo = sugg.patient_video_id;
+                const hasDemoVideo = sugg.demo_video_url;
+                const hasVideos = hasPatientVideo || hasDemoVideo;
                 
                 return `
                     <div class="feedback-card" onclick="markFeedbackViewed(${sugg.id})">
@@ -1390,6 +1459,37 @@
                             </div>
                             <div class="feedback-score ${scoreClass}">${sugg.form_score || 0}%</div>
                         </div>
+                        
+                        ${hasVideos ? `
+                            <div class="video-comparison">
+                                <div class="video-comparison-container">
+                                    ${hasPatientVideo ? `
+                                        <div class="video-panel">
+                                            <div class="video-panel-label">📹 Your Performance</div>
+                                            <video class="comparison-video" controls>
+                                                <source src="${API_URL}/api/videos/${sugg.patient_video_id}/stream?token=${token}" type="video/mp4">
+                                            </video>
+                                        </div>
+                                    ` : ''}
+                                    ${hasDemoVideo ? `
+                                        <div class="video-panel">
+                                            <div class="video-panel-label">🎯 Reference: ${sugg.demo_video_title || 'Demo'}</div>
+                                            <div class="demo-video-wrapper">
+                                                <iframe 
+                                                    src="${sugg.demo_video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}" 
+                                                    frameborder="0" 
+                                                    allowfullscreen
+                                                    class="comparison-video-iframe">
+                                                </iframe>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                ${hasPatientVideo && hasDemoVideo ? `
+                                    <div class="video-sync-hint">💡 Tip: Play both videos to compare your form with the reference</div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
                         
                         ${feedbackItems.length > 0 ? `
                             <div class="suggestion-list">
