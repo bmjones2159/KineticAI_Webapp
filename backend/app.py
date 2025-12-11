@@ -20,17 +20,39 @@ import traceback
 from logging.handlers import RotatingFileHandler
 import json
 from collections import Counter
-import numpy as np
 
-# Try to import AI dependencies (optional - will use mock if not available)
+# Try to import numpy (optional for smart analysis)
 try:
-    import cv2
-    from ultralytics import YOLO
-    AI_ENABLED = True
-    print("✓ AI dependencies loaded (YOLOv8, OpenCV)")
-except ImportError as e:
-    AI_ENABLED = False
-    print(f"⚠ AI dependencies not available: {e}. Using mock analysis.")
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Mock numpy for basic operations
+    class MockNumpy:
+        @staticmethod
+        def array(x):
+            return list(x)
+        @staticmethod
+        def mean(x):
+            return sum(x) / len(x) if x else 0
+        @staticmethod
+        def arctan2(y, x):
+            import math
+            return math.atan2(y, x)
+        @staticmethod
+        def abs(x):
+            return abs(x)
+        @staticmethod
+        def zeros(shape):
+            if isinstance(shape, tuple):
+                return [[0] * shape[1] for _ in range(shape[0])]
+            return [0] * shape
+    np = MockNumpy()
+
+# AI dependencies are NOT loaded on Render (too heavy)
+# The app uses smart mock analysis instead
+AI_ENABLED = False
+print("ℹ AI dependencies not loaded - using smart mock analysis")
 
 # Initialize Flask app with static file serving
 STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
@@ -1127,11 +1149,32 @@ def log_workout():
                 db.session.flush()
                 video_id = video.id
                 
-                # Run AI analysis using integrated KineticAnalyzer
+                # Run AI analysis - try external analyzer first, then local/mock
                 try:
-                    analyzer = get_analyzer()
-                    analysis_results = analyzer.analyze_video(filepath, exercise_type)
-                    form_score = analysis_results.get('form_score', analysis_results.get('accuracy_pct', 75))
+                    KINETIC_ANALYZER_URL = app.config.get('KINETIC_ANALYZER_URL')
+                    
+                    if KINETIC_ANALYZER_URL:
+                        # Use external analyzer (Colab with YOLOv8)
+                        import requests
+                        print(f"Calling external analyzer: {KINETIC_ANALYZER_URL}")
+                        with open(filepath, 'rb') as f:
+                            response = requests.post(
+                                f"{KINETIC_ANALYZER_URL}/api/analyze",
+                                files={'video': f},
+                                data={'exercise_type': exercise_type, 'user_id': str(user_id)},
+                                timeout=300
+                            )
+                        if response.status_code == 200:
+                            analysis_results = response.json()
+                            form_score = analysis_results.get('form_score', analysis_results.get('accuracy_pct', 75))
+                            print(f"External analysis complete: {form_score}%")
+                        else:
+                            raise Exception(f"External analyzer returned {response.status_code}")
+                    else:
+                        # Use local analyzer (mock when AI not available)
+                        analyzer = get_analyzer()
+                        analysis_results = analyzer.analyze_video(filepath, exercise_type)
+                        form_score = analysis_results.get('form_score', analysis_results.get('accuracy_pct', 75))
                     
                     # Get patient's workout history for smart recommendations
                     patient_history = WorkoutLog.query.filter_by(
