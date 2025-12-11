@@ -1604,6 +1604,48 @@ def create_demo_users():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/admin/migrate-db', methods=['POST'])
+def migrate_database():
+    """Add missing columns to database tables"""
+    try:
+        migrations = []
+        
+        # Check and add demo_video_id column to exercise_video_assignments
+        with db.engine.connect() as conn:
+            # Check if column exists
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'exercise_video_assignments' AND column_name = 'demo_video_id'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE exercise_video_assignments 
+                    ADD COLUMN demo_video_id INTEGER REFERENCES demo_videos(id)
+                """))
+                conn.commit()
+                migrations.append("Added demo_video_id to exercise_video_assignments")
+            else:
+                migrations.append("demo_video_id already exists")
+            
+            # Check and add assignment_id column to workout_logs
+            result = conn.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'workout_logs' AND column_name = 'assignment_id'
+            """))
+            if not result.fetchone():
+                conn.execute(db.text("""
+                    ALTER TABLE workout_logs 
+                    ADD COLUMN assignment_id INTEGER REFERENCES exercise_video_assignments(id)
+                """))
+                conn.commit()
+                migrations.append("Added assignment_id to workout_logs")
+            else:
+                migrations.append("assignment_id already exists")
+        
+        return jsonify({'message': 'Database migration complete', 'migrations': migrations}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/therapist/workouts/<int:workout_id>/feedback', methods=['POST'])
 @jwt_required()
 def add_workout_feedback(workout_id):
